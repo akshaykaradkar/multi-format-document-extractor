@@ -9,11 +9,7 @@
 
 ## Demo
 
-https://github.com/user-attachments/assets/webapp_demo_final.mp4
-
-<video src="docs/videos/webapp_demo_final.mp4" width="100%" controls autoplay muted>
-  Your browser does not support the video tag.
-</video>
+![Webapp Demo](docs/videos/webapp_demo.gif)
 
 *Watch the webapp process a PDF document and extract structured data with confidence scoring*
 
