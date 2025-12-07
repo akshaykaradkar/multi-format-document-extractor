@@ -198,6 +198,39 @@ Rationale:
 
 ---
 
+## 9. Team Requirements
+
+### Implementation Team (3-4 months)
+
+| Role | Count | Responsibilities |
+|------|-------|------------------|
+| AI/ML Engineer | 1 | Pipeline development, model integration, GPT-4o implementation |
+| Backend Developer | 1 | API development, parsers, integration with existing systems |
+| DevOps (part-time) | 0.5 | Cloud setup, CI/CD, monitoring |
+| QA Engineer (part-time) | 0.5 | Testing, validation, edge case handling |
+
+### Required Skills
+
+**AI/ML Engineer:**
+- Python (pandas, pydantic)
+- OpenAI API / GPT-4o Vision
+- Document parsing (pdfplumber, python-docx)
+- NLP basics, prompt engineering
+
+**Backend Developer:**
+- Python, REST APIs
+- Integration experience (ERP/Tally connectors)
+- Database design
+
+### Post-Launch Support (Ongoing)
+
+| Role | Allocation | Focus |
+|------|------------|-------|
+| AI Engineer | 0.25 FTE | Model monitoring, accuracy improvements |
+| Support | 0.25 FTE | Issue resolution, client format changes |
+
+---
+
 ## References
 
 **Salary Data:**
