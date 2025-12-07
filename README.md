@@ -3,7 +3,19 @@
 ## AI-Powered Intelligent Document Processing
 
 **Author:** Akshay Karadkar
-**Date:** December 2025
+**Date:** December 2024
+
+---
+
+## Demo
+
+https://github.com/user-attachments/assets/webapp_demo_final.mp4
+
+<video src="docs/videos/webapp_demo_final.mp4" width="100%" controls autoplay muted>
+  Your browser does not support the video tag.
+</video>
+
+*Watch the webapp process a PDF document and extract structured data with confidence scoring*
 
 ---
 
@@ -11,7 +23,7 @@
 
 A production-ready document processing system that extracts structured data from multiple document formats (PDF, Excel, Word, CSV, scanned images) and outputs standardized JSON. The system demonstrates the evolution from simple rule-based parsing to sophisticated AI-powered extraction with an intelligent hybrid approach.
 
-![Webapp Demo](docs/images/webapp_screenshot.png)
+![Webapp Screenshot](docs/images/webapp_screenshot.png)
 
 ---
 
