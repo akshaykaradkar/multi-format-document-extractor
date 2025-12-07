@@ -36,7 +36,7 @@
 ```
 
 **Current Pain:**
-- $465,000/year in processing costs
+- ₹15-20 Lakhs/year in processing costs
 - 800+ orders/month manually processed
 - Scalability limited by headcount
 
@@ -143,7 +143,7 @@ Processing: client_a_techcorp.pdf
 Order ID:      PO-2024-001234
 Client:        TechCorp Industries
 Items:         3
-Total:         $5,250.00
+Total:         ₹5,250.00
 Confidence:    0.92 (HIGH - Auto-approve)
 ──────────────────────────────────────────────────────────
 ```
@@ -161,21 +161,21 @@ Confidence:    0.92 (HIGH - Auto-approve)
 │                    FINANCIAL IMPACT                              │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  IMPLEMENTATION COST        $180,000   (one-time)               │
-│  ANNUAL OPERATING           $80,000    (ongoing)                │
-│  ANNUAL SAVINGS             $340,000   (year 1)                 │
+│  IMPLEMENTATION COST        ₹12-15 Lakhs  (one-time)            │
+│  ANNUAL OPERATING           ₹5-7 Lakhs    (ongoing)             │
+│  ANNUAL SAVINGS             ₹12-16 Lakhs  (year 1)              │
 │                                                                  │
 │  ═══════════════════════════════════════════════════════════   │
 │                                                                  │
-│  YEAR 1 ROI                 44%                                 │
-│  PAYBACK PERIOD             8 months                            │
-│  5-YEAR NPV                 $1,045,000                          │
+│  YEAR 1 ROI                 ~80%                                │
+│  PAYBACK PERIOD             12-14 months                        │
+│  3-YEAR NET BENEFIT         ₹11.5 Lakhs                         │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Labor Savings:** 2.5 FTE ($150K-$175K/year)
-**Error Reduction:** 85% ($65K-$80K/year)
+**Labor Savings:** 2.5 FTE (₹7-9 Lakhs/year)
+**Error Reduction:** 85% (₹3-4 Lakhs/year)
 **Scalability:** Handle 10x volume without headcount increase
 
 ---
@@ -215,7 +215,7 @@ Confidence:    0.92 (HIGH - Auto-approve)
 
 | Factor | Off-the-Shelf | Our Solution |
 |--------|---------------|--------------|
-| 5-Year TCO | $1.75M+ | **$600K** |
+| 3-Year TCO | ₹60-80 Lakhs | **₹30-40 Lakhs** |
 | Customization | Limited | **Full control** |
 | OCR Accuracy | ~80% | **~90% (GPT-4o)** |
 | Vendor Lock-in | Yes | **None** |
@@ -258,12 +258,11 @@ Confidence:    0.92 (HIGH - Auto-approve)
 # Appendix: Code Structure
 
 ```
-assignment/
+document-automation/
 ├── docs/
-│   ├── PRD.md                     # Product Requirements
-│   ├── TECHNICAL_ARCHITECTURE.md  # System Design
-│   ├── IMPLEMENTATION_STRATEGY.md # Rollout Plan
-│   ├── BUSINESS_CASE.md           # ROI Analysis
+│   ├── TECHNICAL_ARCHITECTURE.md  # System Design (40%)
+│   ├── IMPLEMENTATION_STRATEGY.md # Rollout Plan (25%)
+│   ├── BUSINESS_CASE.md           # ROI Analysis (15%)
 │   └── PRESENTATION.md            # This document
 ├── src/
 │   ├── parsers/                   # 5 format-specific parsers
@@ -303,7 +302,7 @@ assignment/
     }
   ],
   "order_total": 5250.00,
-  "currency": "USD",
+  "currency": "INR",
   "special_instructions": "Deliver to Loading Dock B",
   "confidence_score": 0.92
 }
