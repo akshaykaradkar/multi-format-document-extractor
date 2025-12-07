@@ -3,8 +3,7 @@
 ## AI-Powered Intelligent Document Processing
 
 **Author:** Akshay Karadkar
-**Position:** Senior AI Engineer
-**Date:** December 2024
+**Date:** December 2025
 
 ---
 
@@ -53,9 +52,6 @@ pipeline = HybridPipeline(mode=ExtractionMode.HYBRID)
 result = pipeline.process("any_document")
 # Speed: ~9s avg | Cost: $0.001 avg | Accuracy: High
 ```
-
-**The key insight:**
-> "A junior engineer uses AI everywhere. A senior engineer knows WHEN to use AI."
 
 ### Stage 4: MCP Agent Architecture
 **Natural language interface with tool-calling**
@@ -431,5 +427,3 @@ MIT License
 ## Author
 
 **Akshay Karadkar**
-Senior AI Engineer
-December 2024
