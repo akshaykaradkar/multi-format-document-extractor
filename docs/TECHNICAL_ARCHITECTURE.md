@@ -4,8 +4,7 @@
 
 **Version:** 2.0 (AI-Powered Architecture)
 **Author:** Akshay Karadkar
-**Date:** December 2024
-**Position:** Senior AI Engineer
+**Date:** December 2025
 
 ---
 
@@ -13,7 +12,7 @@
 
 This document presents a **state-of-the-art AI-powered architecture** for intelligent document processing (IDP). Unlike traditional rule-based approaches that require custom code for each format, this solution leverages **multi-modal transformer models** (LayoutLMv3, Donut, TrOCR) that understand document structure, layout, and content simultaneously.
 
-### What Makes This a Senior AI Engineer Solution
+### What Makes This a Solution
 
 | Aspect | Traditional/Junior Approach | This Architecture (Senior Level) |
 |--------|----------------------------|----------------------------------|
@@ -215,9 +214,8 @@ pipeline = HybridPipeline(mode=ExtractionMode.HYBRID)
 result = pipeline.process("any_document")
 ```
 
-### 3.6 Why This Matters for a Senior AI Engineer
+### 3.6 Why This Matters
 
-> "A junior engineer uses AI everywhere. A senior engineer knows WHEN to use AI."
 
 | Approach | Problem |
 |----------|---------|
