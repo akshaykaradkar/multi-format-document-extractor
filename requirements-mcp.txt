@@ -1,0 +1,19 @@
+# MCP Server Extension Dependencies
+# Install with: pip install -r requirements-mcp.txt
+
+# MCP Server (Model Context Protocol)
+# FastMCP is a high-level Python wrapper for building MCP servers
+# mcp>=1.0.0
+# fastmcp>=2.0.0
+
+# Note: FastMCP is optional - the agent works without MCP server
+# The MCP server provides standardized tool protocol for external clients
+
+# Core dependencies (already in requirements.txt)
+openai>=1.0.0
+pydantic>=2.0.0
+
+# For MCP server mode (optional)
+# Uncomment if you want to run as MCP server:
+# uvicorn>=0.20.0
+# httpx>=0.24.0

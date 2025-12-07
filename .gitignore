@@ -1,0 +1,62 @@
+# BMAD framework (not needed for demo)
+.bmad/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output/*.json
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Claude Code config (not needed for demo)
+.claude/
+CLAUDE.md
+
+# Test artifacts
+test_*.png
+test_*.py
+webapp_test_screenshot.png
+test_fail_*.png
+test_timeout_screenshot.png
+test_validation_screenshot.png
+test_results_screenshot.png
+take_screenshot.py
+
+# Temporary/personal files
+*.tmp
+*.temp
+akshay_karadkar*.pdf
+Senior AI*.pdf
+Screenshot*.jpg
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/

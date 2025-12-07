@@ -1,0 +1,12 @@
+# Streamlit Web Application Dependencies
+# Document Automation PoC - Visual Demo
+# Author: Akshay Karadkar
+
+# Web Framework
+streamlit>=1.28.0
+
+# File watching for development
+watchdog>=3.0.0
+
+# Note: Core dependencies (openai, pdfplumber, pandas, etc.)
+# are already in requirements.txt

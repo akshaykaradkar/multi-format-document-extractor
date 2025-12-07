@@ -1,0 +1,3 @@
+Order_ID,Customer,Item_SKU,Product_Name,Qty_Ordered,Unit_Cost,Order_Date,Ship_Date,Notes
+SCP-2024-0445,Supply Chain Partners,SKU-7789,Heavy Duty Clamp,100,12.50,2024-03-20,03/27/2024,Standard shipping
+SCP-2024-0445,Supply Chain Partners,SKU-3421,Mounting Bracket,75,8.25,2024-03-20,03/27/2024,
