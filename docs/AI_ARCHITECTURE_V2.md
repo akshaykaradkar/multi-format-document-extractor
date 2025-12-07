@@ -1,9 +1,9 @@
 # AI-Powered Document Understanding Architecture v2.0
 
-## Senior AI Engineer Solution Design
+## Solution Design
 
 **Author:** Akshay Karadkar
-**Date:** December 2024
+**Date:** December 2025
 
 ---
 
@@ -194,7 +194,7 @@ class ModelRouter:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Why This Matters for Senior AI Engineer Role
+### 3.2 Why This Matters
 
 **Traditional Approach (Junior/Mid-level):**
 ```python
@@ -643,7 +643,7 @@ class UncertaintySampler:
 
 ---
 
-## 8. Key Differentiators for Senior AI Engineer
+## 8. Key Differentiators
 
 ### 8.1 What This Architecture Demonstrates
 
@@ -659,7 +659,6 @@ class UncertaintySampler:
 ### 8.2 Technical Depth
 
 ```python
-# This is what a Senior AI Engineer writes:
 
 class DocumentUnderstandingSystem:
     """
@@ -722,46 +721,3 @@ class DocumentUnderstandingSystem:
 
         return result
 ```
-
----
-
-## 9. Implementation Roadmap
-
-### Phase 1: Foundation
-- [ ] Set up LayoutLMv3 and Donut models
-- [ ] Implement document-to-image preprocessing
-- [ ] Create unified extraction interface
-
-### Phase 2: Intelligence
-- [ ] Train model router on document characteristics
-- [ ] Implement ensemble fusion layer
-- [ ] Add LLM reasoning for edge cases
-
-### Phase 3: Confidence
-- [ ] Implement MC Dropout uncertainty
-- [ ] Train calibration network
-- [ ] Build confidence-based routing
-
-### Phase 4: Learning
-- [ ] Build human review interface
-- [ ] Implement LoRA fine-tuning pipeline
-- [ ] Create active learning feedback loop
-
-### Phase 5: Production
-- [ ] Deploy with vLLM/Triton
-- [ ] Set up monitoring and alerting
-- [ ] Document and test thoroughly
-
----
-
-## 10. Conclusion
-
-This architecture demonstrates the skills expected of a **Senior AI Engineer**:
-
-1. **Not just calling APIs** - Building custom models and training pipelines
-2. **Understanding trade-offs** - When to use LayoutLMv3 vs Donut vs LLM
-3. **Production thinking** - Confidence calibration, active learning, scaling
-4. **Research awareness** - Using 2024-2025 state-of-the-art approaches
-5. **System design** - End-to-end architecture with feedback loops
-
-The key insight: **A truly AI-powered system learns and improves**, it doesn't just execute fixed rules.
