@@ -3,7 +3,7 @@
 ## AI-Powered Intelligent Document Processing
 
 **Author:** Akshay Karadkar
-**Date:** December 2024
+**Date:** December 2025
 
 ---
 
