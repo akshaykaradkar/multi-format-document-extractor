@@ -3,7 +3,7 @@
 ## Document Automation & Data Harmonization System
 
 **Author:** Akshay Karadkar
-**Date:** December 2024
+**Date:** December 2025
 
 ---
 
@@ -240,11 +240,11 @@ Rationale:
 - LinkedIn Salary Insights India
 
 **Technology Pricing:**
-- OpenAI API: platform.openai.com/pricing (Dec 2024)
+- OpenAI API: platform.openai.com/pricing (Dec 2025)
 - AWS Calculator: calculator.aws
 
 **Industry Research:**
-- Gartner IDP Market Guide 2024
+- Gartner IDP Market Guide 2025
 - McKinsey Operations Studies (manual data entry error rates: 5-10%)
 - NASSCOM AI Adoption Reports
 
