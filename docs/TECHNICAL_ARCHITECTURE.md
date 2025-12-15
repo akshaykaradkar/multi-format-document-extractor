@@ -1286,7 +1286,7 @@ FILE_TYPE_MAPPING = {
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Dec 2024 | Akshay Karadkar | Initial release |
+| 1.0 | Dec 2025 | Akshay Karadkar | Initial release |
 
 ---
 
