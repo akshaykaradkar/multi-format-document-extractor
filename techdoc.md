@@ -378,4 +378,109 @@ Your existing youtube-analyst code uses `python-dotenv` (I can see it through th
 
 **Run it, paste the full output, and I write all 5 files in one shot.** Use the Rick Astley video ID as-is — it's a deliberately well-known test case where I know there are captions, top comments, and engaged community for sentiment analysis. If we move to a video without captions later, the fallback path kicks in.
 
+----
+
+
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_youtube_summarizer_prereqs.py
+warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
+- index
+✓ Loaded .env file
+
+🎬 Test video ID: dQw4w9WgXcQ
+📁 Working dir:   /usr/local/google/home/karadkar/ADK_Projects/adk-samples/python/agents/youtube-analyst
+
+============================================================
+TEST 1: YouTube Data API — videos.list (metadata)
+============================================================
+✓ Found YOUTUBE_API_KEY (first 8 chars): AIzaSyCJ...
+✅ Title:    Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)
+✅ Channel:  Rick Astley
+✅ Duration: PT3M34S
+✅ Views:    1771260425
+✅ Description (first 100 chars): The official video for “Never Gonna Give You Up” by Rick Astley. 
+
+Never: The Autobiography 📚 OUT NO
+
+============================================================
+TEST 2: youtube-transcript-api (transcript scraping)
+============================================================
+✅ Transcript snippets returned: 61
+✅ First snippet @ 1.4s: '[♪♪♪]'
+✅ Total transcript chars: ~2029
+
+============================================================
+TEST 3: YouTube Data API — commentThreads.list (top comments)
+============================================================
+✅ Comments returned: 20
+   1. [237872 likes] @YouTube: can confirm: he never gave us up
+   2. [138705 likes] @SonimodGT: Petition to make this the national anthem of the internet
+   3. [550668 likes] @Oatman69: Gonna flag this for nudity so I can rick roll the YouTube staff
+
+============================================================
+SUMMARY
+============================================================
+  ✅ Metadata API
+  ✅ Transcript API
+  ✅ Comments API
+
+👍 All three external dependencies work.
+👍 Safe to proceed with full transcript-based design.
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_youtube_summarizer_prereqs.py
+warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
+- index
+✓ Loaded .env file
+
+🎬 Test video ID: uFI5WpK2sgg
+📁 Working dir:   /usr/local/google/home/karadkar/ADK_Projects/adk-samples/python/agents/youtube-analyst
+
+============================================================
+TEST 1: YouTube Data API — videos.list (metadata)
+============================================================
+✓ Found YOUTUBE_API_KEY (first 8 chars): AIzaSyCJ...
+✅ Title:    Shouting at Stars: A History of Interstellar Messages
+✅ Channel:  LEMMiNO
+✅ Duration: PT2H27M36S
+✅ Views:    4092589
+✅ Description (first 100 chars): Since the early 1970s, humanity has sent messages beyond the Solar System in the hopes of contacting
+
+============================================================
+TEST 2: youtube-transcript-api (transcript scraping)
+============================================================
+❌ FAILED: RequestBlocked: 
+Could not retrieve a transcript for the video https://www.youtube.com/watch?v=uFI5WpK2sgg! This is most likely caused by:
+
+YouTube is blocking requests from your IP. This usually is due to one of the following reasons:
+- You have done too many requests and your IP has been blocked by YouTube
+- You are doing requests from an IP belonging to a cloud provider (like AWS, Google Cloud Platform, Azure, etc.). Unfortunately, most IPs from cloud providers are blocked by YouTube.
+
+There are two things you can do to work around this:
+1. Use proxies to hide your IP address, as explained in the "Working around IP bans" section of the README (https://github.com/jdepoix/youtube-transcript-api?tab=readme-ov-file#working-around-ip-bans-requestblocked-or-ipblocked-exception).
+2. (NOT RECOMMENDED) If you authenticate your requests using cookies, you will be able to continue doing requests for a while. However, YouTube will eventually permanently ban the account that you have used to authenticate with! So only do this if you don't mind your account being banned!
+
+If you are sure that the described cause is not responsible for this error and that a transcript should be retrievable, please create an issue at https://github.com/jdepoix/youtube-transcript-api/issues. Please add which version of youtube_transcript_api you are using and provide the information needed to replicate the error. Also make sure that there are no open issues which already describe your problem!
+
+Likely cause: cloudtop egress IP is blocked by YouTube anti-scraping.
+This is EXPECTED ~40% of the time on datacenter IPs.
+If this fails, our tool will fall back to using the video description.
+
+============================================================
+TEST 3: YouTube Data API — commentThreads.list (top comments)
+============================================================
+✅ Comments returned: 20
+   1. [2999 likes] @LEMMiNO: Credits, references, and more:
+https://www.lemmi.no/p/shouting-at-stars
+   2. [47591 likes] @vaggelistzi6412: Brothers, we have been reunited again..
+   3. [32296 likes] @Techni_Log: Once a year we come together to appreciate another masterpiece
+
+============================================================
+SUMMARY
+============================================================
+  ✅ Metadata API
+  ❌ Transcript API
+  ✅ Comments API
+
+⚠️  Transcript scraping failed but API calls work.
+   Our tool's description-fallback will handle this.
+   Safe to proceed, with fallback as primary path.
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ 
 
