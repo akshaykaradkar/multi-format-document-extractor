@@ -934,3 +934,53 @@ Your manager (or any reviewer) will recognize at a glance: *"You followed the sa
 
 This is a small architectural detail but exactly the kind of thing that separates "fork and add" from "fork and add **with taste**." Good catch on your end. Run the steps and ship it.
 
+
+-------------------------
+
+#1
+please summerise the video with video id 'CbUjuwhQPKs'
+
+#2
+🎯 Delegating to Video Summarizer for: CbUjuwhQPKs
+
+#3
+#4
+📺 Fetching video metadata...
+
+#5
+#6
+📜 Pulling transcript with timestamps...
+
+#7
+#8
+💬 Reading top community comments...
+
+#9
+#10
+🎬 The Search For D. B. Cooper Channel: LEMMiNO · Duration: 29m 27s · Views: 23551369
+
+⚡ Quick Summary This video documentary explores the enduring mystery of D.B. Cooper, one of America's most famous unsolved cases. It recounts the audacious 1971 hijacking of a Boeing 727, where a man extorted $200,000 before parachuting from the aircraft and vanishing without a trace. The video delves into the details of the subsequent manhunt, the scant evidence left behind, and the various compelling suspects identified over the years.
+
+📋 TL;DR
+
+In 1971, a man calling himself Dan Cooper hijacked a Northwest Airlines flight.
+He demanded and received a ransom of $200,000 and four parachutes.
+He then ordered the plane to fly towards Mexico City and jumped from the rear airstair somewhere over the Pacific Northwest.
+An exhaustive FBI investigation, codenamed NORJAK, failed to determine his true identity or whereabouts.
+In 1980, a boy found a decaying packet of the ransom money, deepening the mystery of Cooper's fate.
+The video analyzes several key suspects, weighing the evidence that points towards and against each of them.
+To this day, the D.B. Cooper case remains the only unsolved skyjacking in U.S. commercial aviation history.
+⚠️ Transcript was unavailable for this video, so chapter-level summaries cannot be generated. The summary above is based on the video description.
+
+💬 What Viewers Are Saying Overall Sentiment: ~70% Positive · ~30% Neutral · ~0% Negative
+
+Key Themes:
+
+Speculation and Humor: A large number of comments involve humorous scenarios imagining an elderly D.B. Cooper alive today, watching the video or trying to confess to disbelieving nurses.
+Admiration for the Audacity: Many viewers express a sort of respect for the "nerves of steel" Cooper displayed, with some romanticizing him as a folk hero or an action movie protagonist.
+Praise for Video Quality: The high production value of the documentary is a recurring theme, with one popular comment joking that it feels like a "YouTube Premium" video.
+Standout Reactions:
+
+Many viewers are amused by the idea that D.B. Cooper might be an old man now, watching the video and thinking to himself, "I got away with it."
+There's a strong sense of admiration for Cooper's calm and polite demeanor during the hijacking, with some jokingly suggesting this proves he must have been Canadian.
+Viewers appreciate the deep dive into the case, with some offering their own detailed technical analyses of the jump and the equipment Cooper would have needed to survive.
