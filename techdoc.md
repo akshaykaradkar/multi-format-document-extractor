@@ -381,106 +381,556 @@ Your existing youtube-analyst code uses `python-dotenv` (I can see it through th
 ----
 
 
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_youtube_summarizer_prereqs.py
-warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
-- index
-✓ Loaded .env file
+Great catch. You're right to question this — I had you about to create files in a structure that doesn't quite match what's there. Let me reconcile.
 
-🎬 Test video ID: dQw4w9WgXcQ
-📁 Working dir:   /usr/local/google/home/karadkar/ADK_Projects/adk-samples/python/agents/youtube-analyst
+# 🔍 What I Notice About The Repo Structure
 
-============================================================
-TEST 1: YouTube Data API — videos.list (metadata)
-============================================================
-✓ Found YOUTUBE_API_KEY (first 8 chars): AIzaSyCJ...
-✅ Title:    Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)
-✅ Channel:  Rick Astley
-✅ Duration: PT3M34S
-✅ Views:    1771260425
-✅ Description (first 100 chars): The official video for “Never Gonna Give You Up” by Rick Astley. 
+Looking at the actual layout you pasted:
 
-Never: The Autobiography 📚 OUT NO
+```
+youtube_analyst/
+├── agent.py              ← root agent + sub-agent definitions live HERE
+├── visualization_agent.py  ← visualization sub-agent code (NOT in a sub_agents/ folder)
+├── visualization_tools.py  ← its tools (NOT in a sub_agents/ folder)
+├── tools.py                ← root agent's tools
+├── skills/
+└── prompts/
+```
 
-============================================================
-TEST 2: youtube-transcript-api (transcript scraping)
-============================================================
-✅ Transcript snippets returned: 61
-✅ First snippet @ 1.4s: '[♪♪♪]'
-✅ Total transcript chars: ~2029
+**The existing pattern is flat, not nested.** The visualization sub-agent isn't in a `sub_agents/visualization_agent/` folder — it's just `visualization_agent.py` at the package root. Same for its tools.
 
-============================================================
-TEST 3: YouTube Data API — commentThreads.list (top comments)
-============================================================
-✅ Comments returned: 20
-   1. [237872 likes] @YouTube: can confirm: he never gave us up
-   2. [138705 likes] @SonimodGT: Petition to make this the national anthem of the internet
-   3. [550668 likes] @Oatman69: Gonna flag this for nudity so I can rick roll the YouTube staff
+In my last message I had you create `sub_agents/video_summarizer/` (a nested folder structure). **That would be inconsistent with the existing pattern.** A code reviewer or your manager would notice immediately: *"Why does visualization live as a flat file but summarizer lives in a nested folder?"*
 
-============================================================
-SUMMARY
-============================================================
-  ✅ Metadata API
-  ✅ Transcript API
-  ✅ Comments API
+# ✅ The Correction — Match The Existing Pattern Exactly
 
-👍 All three external dependencies work.
-👍 Safe to proceed with full transcript-based design.
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_youtube_summarizer_prereqs.py
-warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
-- index
-✓ Loaded .env file
+We mirror exactly how `visualization_agent.py` is organized. New files become flat siblings inside the `youtube_analyst/` package, no new folders.
 
-🎬 Test video ID: uFI5WpK2sgg
-📁 Working dir:   /usr/local/google/home/karadkar/ADK_Projects/adk-samples/python/agents/youtube-analyst
+**Revised file layout (final):**
 
-============================================================
-TEST 1: YouTube Data API — videos.list (metadata)
-============================================================
-✓ Found YOUTUBE_API_KEY (first 8 chars): AIzaSyCJ...
-✅ Title:    Shouting at Stars: A History of Interstellar Messages
-✅ Channel:  LEMMiNO
-✅ Duration: PT2H27M36S
-✅ Views:    4092589
-✅ Description (first 100 chars): Since the early 1970s, humanity has sent messages beyond the Solar System in the hopes of contacting
+```
+youtube_analyst/
+├── __init__.py                       ← UNTOUCHED
+├── agent.py                          ← MODIFIED (2 lines added)
+├── config.py                         ← UNTOUCHED
+├── tools.py                          ← UNTOUCHED
+├── visualization_agent.py            ← UNTOUCHED
+├── visualization_tools.py            ← UNTOUCHED
+├── video_summarizer_agent.py         ← NEW (mirrors visualization_agent.py)
+├── video_summarizer_tools.py         ← NEW (mirrors visualization_tools.py)
+├── skills/                           ← UNTOUCHED
+└── prompts/
+    ├── youtube_agent.txt             ← MODIFIED (1 paragraph added)
+    ├── visualization_agent.txt       ← UNTOUCHED
+    └── video_summarizer_agent.txt    ← NEW (mirrors visualization_agent.txt)
+```
 
-============================================================
-TEST 2: youtube-transcript-api (transcript scraping)
-============================================================
-❌ FAILED: RequestBlocked: 
-Could not retrieve a transcript for the video https://www.youtube.com/watch?v=uFI5WpK2sgg! This is most likely caused by:
+Three new files. Two modifications. Everything else untouched. Consistent with the existing flat pattern.
 
-YouTube is blocking requests from your IP. This usually is due to one of the following reasons:
-- You have done too many requests and your IP has been blocked by YouTube
-- You are doing requests from an IP belonging to a cloud provider (like AWS, Google Cloud Platform, Azure, etc.). Unfortunately, most IPs from cloud providers are blocked by YouTube.
+**What I'm dropping vs. what I had before:**
+- ❌ No `sub_agents/` folder (doesn't exist in this repo's convention)
+- ❌ No `prompt.py` inside a sub_agent folder (existing pattern uses `prompts/*.txt` instead, loaded via `load_prompt`)
+- ❌ No `README.md` inside a sub-agent folder (existing pattern has docs at the project root, not per-sub-agent)
+- ✅ Prompt becomes a `.txt` file in `prompts/`, loaded the same way as `youtube_agent.txt` and `visualization_agent.txt`
+- ✅ Tools become a flat module file
+- ✅ Sub-agent definition becomes a flat module file
 
-There are two things you can do to work around this:
-1. Use proxies to hide your IP address, as explained in the "Working around IP bans" section of the README (https://github.com/jdepoix/youtube-transcript-api?tab=readme-ov-file#working-around-ip-bans-requestblocked-or-ipblocked-exception).
-2. (NOT RECOMMENDED) If you authenticate your requests using cookies, you will be able to continue doing requests for a while. However, YouTube will eventually permanently ban the account that you have used to authenticate with! So only do this if you don't mind your account being banned!
+This is **cleaner, more consistent, and less work**.
 
-If you are sure that the described cause is not responsible for this error and that a transcript should be retrievable, please create an issue at https://github.com/jdepoix/youtube-transcript-api/issues. Please add which version of youtube_transcript_api you are using and provide the information needed to replicate the error. Also make sure that there are no open issues which already describe your problem!
+# 📄 The Three NEW Files (Revised, Consistent With Repo Style)
 
-Likely cause: cloudtop egress IP is blocked by YouTube anti-scraping.
-This is EXPECTED ~40% of the time on datacenter IPs.
-If this fails, our tool will fall back to using the video description.
+## File A: `youtube_analyst/video_summarizer_tools.py`
 
-============================================================
-TEST 3: YouTube Data API — commentThreads.list (top comments)
-============================================================
-✅ Comments returned: 20
-   1. [2999 likes] @LEMMiNO: Credits, references, and more:
-https://www.lemmi.no/p/shouting-at-stars
-   2. [47591 likes] @vaggelistzi6412: Brothers, we have been reunited again..
-   3. [32296 likes] @Techni_Log: Once a year we come together to appreciate another masterpiece
+(Same code as before — only the location changes. No nested folder.)
 
-============================================================
-SUMMARY
-============================================================
-  ✅ Metadata API
-  ❌ Transcript API
-  ✅ Comments API
+```python
+"""Tools for the video_summarizer sub-agent.
 
-⚠️  Transcript scraping failed but API calls work.
-   Our tool's description-fallback will handle this.
-   Safe to proceed, with fallback as primary path.
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ 
+Three fetch tools, each independently callable and independently retryable:
+  1. get_video_basics                - metadata via YouTube Data API videos.list
+  2. get_transcript_with_fallback    - transcript scrape, falls back to description
+  3. get_top_comments_for_video      - top comments via commentThreads.list
+
+Total YouTube Data API quota per full summary: 2 units.
+"""
+
+import os
+import re
+from typing import Any
+
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_VIDEO_ID_RE = re.compile(r"[a-zA-Z0-9_-]{11}")
+
+
+def _extract_video_id(maybe_url_or_id: str) -> str:
+    """Accept a bare 11-char video ID or any common YouTube URL form."""
+    s = maybe_url_or_id.strip()
+    if _VIDEO_ID_RE.fullmatch(s):
+        return s
+    for pattern in (
+        r"youtu\.be/([a-zA-Z0-9_-]{11})",
+        r"[?&]v=([a-zA-Z0-9_-]{11})",
+        r"/(?:shorts|embed|v)/([a-zA-Z0-9_-]{11})",
+    ):
+        m = re.search(pattern, s)
+        if m:
+            return m.group(1)
+    raise ValueError(f"Could not extract YouTube video ID from: {maybe_url_or_id!r}")
+
+
+def _get_youtube_client():
+    """Build a YouTube Data API v3 client from YOUTUBE_API_KEY env var."""
+    api_key = os.environ.get("YOUTUBE_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "YOUTUBE_API_KEY environment variable is not set. "
+            "Add it to your .env file."
+        )
+    return build("youtube", "v3", developerKey=api_key)
+
+
+def _parse_iso8601_duration_to_seconds(iso_duration: str) -> int:
+    """Convert ISO 8601 duration (e.g. 'PT2H27M36S') to total seconds."""
+    m = re.fullmatch(
+        r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?",
+        iso_duration or "",
+    )
+    if not m:
+        return 0
+    hours = int(m.group(1) or 0)
+    minutes = int(m.group(2) or 0)
+    seconds = int(m.group(3) or 0)
+    return hours * 3600 + minutes * 60 + seconds
+
+
+# ---------------------------------------------------------------------------
+# Tool 1: video basics (metadata + description)
+# ---------------------------------------------------------------------------
+
+
+def get_video_basics(video_id: str) -> dict[str, Any]:
+    """Fetch basic metadata (title, channel, duration, views, description) for a YouTube video.
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+
+    Returns:
+        On success, a dict with keys:
+            video_id, title, channel_title, published_at, duration_iso,
+            duration_seconds, view_count, like_count, description
+        On failure, a dict with key "error".
+    """
+    try:
+        clean_id = _extract_video_id(video_id)
+        youtube = _get_youtube_client()
+        resp = youtube.videos().list(
+            part="snippet,contentDetails,statistics",
+            id=clean_id,
+        ).execute()
+
+        items = resp.get("items", [])
+        if not items:
+            return {"error": f"No video found for ID: {clean_id}"}
+
+        item = items[0]
+        snippet = item.get("snippet", {})
+        details = item.get("contentDetails", {})
+        stats = item.get("statistics", {})
+        duration_iso = details.get("duration", "")
+
+        return {
+            "video_id": clean_id,
+            "title": snippet.get("title", ""),
+            "channel_title": snippet.get("channelTitle", ""),
+            "published_at": snippet.get("publishedAt", ""),
+            "duration_iso": duration_iso,
+            "duration_seconds": _parse_iso8601_duration_to_seconds(duration_iso),
+            "view_count": stats.get("viewCount", "0"),
+            "like_count": stats.get("likeCount", "0"),
+            "description": snippet.get("description", ""),
+        }
+    except HttpError as e:
+        return {"error": f"YouTube API error: {e}"}
+    except Exception as e:
+        return {"error": f"Failed to fetch basics: {type(e).__name__}: {e}"}
+
+
+# ---------------------------------------------------------------------------
+# Tool 2: transcript with description fallback
+# ---------------------------------------------------------------------------
+
+
+def get_transcript_with_fallback(video_id: str) -> dict[str, Any]:
+    """Fetch a transcript with timestamps. Falls back to description if scraping is blocked.
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+
+    Returns:
+        On success:
+            {
+              "source": "transcript" | "description",
+              "video_id": "...",
+              "language_code": "en" (only when source=transcript),
+              "transcript_text": "[00:01] hello world\\n[00:05] ...",
+              "snippet_count": int (only when source=transcript),
+              "warning": "..." (only when fallback was used),
+            }
+        On hard failure: {"error": "..."}
+    """
+    try:
+        clean_id = _extract_video_id(video_id)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except ImportError:
+        return {
+            "error": "youtube-transcript-api not installed. Run: uv pip install youtube-transcript-api"
+        }
+
+    transcript_error: str | None = None
+    try:
+        # Try v1.x API (instance-based) first
+        try:
+            api = YouTubeTranscriptApi()
+            fetched = api.fetch(clean_id, languages=["en", "en-US", "en-GB"])
+            snippets = fetched.snippets if hasattr(fetched, "snippets") else list(fetched)
+            language_code = getattr(fetched, "language_code", "en")
+        except (AttributeError, TypeError):
+            # Fall back to v0.x API (classmethod)
+            snippets = YouTubeTranscriptApi.get_transcript(
+                clean_id, languages=["en", "en-US", "en-GB"]
+            )
+            language_code = "en"
+
+        if not snippets:
+            transcript_error = "Transcript returned empty result"
+        else:
+            lines = []
+            for s in snippets:
+                text = s.text if hasattr(s, "text") else s["text"]
+                start_seconds = s.start if hasattr(s, "start") else s["start"]
+                mm = int(start_seconds // 60)
+                ss = int(start_seconds % 60)
+                lines.append(f"[{mm:02d}:{ss:02d}] {text}")
+            return {
+                "source": "transcript",
+                "video_id": clean_id,
+                "language_code": language_code,
+                "transcript_text": "\n".join(lines),
+                "snippet_count": len(snippets),
+            }
+    except Exception as e:
+        transcript_error = f"{type(e).__name__}: {e}"
+
+    # Fallback to description
+    basics = get_video_basics(clean_id)
+    if "error" in basics:
+        return {
+            "error": (
+                f"Transcript unavailable ({transcript_error}) "
+                f"AND description fetch failed ({basics['error']})."
+            )
+        }
+
+    description = basics.get("description", "").strip()
+    if not description:
+        return {
+            "error": (
+                f"Transcript unavailable ({transcript_error}) "
+                f"and video has no description to fall back to."
+            )
+        }
+
+    return {
+        "source": "description",
+        "video_id": clean_id,
+        "transcript_text": description,
+        "warning": (
+            f"Transcript unavailable ({transcript_error}). "
+            f"Falling back to video description ({len(description)} chars). "
+            f"Summary quality will be lower and chapter timestamps will be absent."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 3: top comments
+# ---------------------------------------------------------------------------
+
+
+def get_top_comments_for_video(video_id: str) -> dict[str, Any]:
+    """Fetch the top 20 comments for a YouTube video, ordered by YouTube relevance.
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+
+    Returns:
+        On success: {"video_id", "comments_disabled": False, "count", "comments": [...]}
+        Comments disabled: {"video_id", "comments_disabled": True, "count": 0, "comments": []}
+        Other failure: {"error": "..."}
+    """
+    clean_id = None
+    try:
+        clean_id = _extract_video_id(video_id)
+        youtube = _get_youtube_client()
+        resp = youtube.commentThreads().list(
+            part="snippet",
+            videoId=clean_id,
+            order="relevance",
+            maxResults=20,
+            textFormat="plainText",
+        ).execute()
+
+        items = resp.get("items", [])
+        comments = [
+            {
+                "author": item["snippet"]["topLevelComment"]["snippet"].get("authorDisplayName", "Unknown"),
+                "text": item["snippet"]["topLevelComment"]["snippet"].get("textDisplay", ""),
+                "like_count": item["snippet"]["topLevelComment"]["snippet"].get("likeCount", 0),
+                "published_at": item["snippet"]["topLevelComment"]["snippet"].get("publishedAt", ""),
+            }
+            for item in items
+        ]
+
+        return {
+            "video_id": clean_id,
+            "comments_disabled": False,
+            "count": len(comments),
+            "comments": comments,
+        }
+    except HttpError as e:
+        if "commentsDisabled" in str(e) or "disabled comments" in str(e).lower():
+            return {
+                "video_id": clean_id or video_id,
+                "comments_disabled": True,
+                "count": 0,
+                "comments": [],
+            }
+        return {"error": f"YouTube API error: {e}"}
+    except Exception as e:
+        return {"error": f"Failed to fetch comments: {type(e).__name__}: {e}"}
+```
+
+## File B: `youtube_analyst/prompts/video_summarizer_agent.txt`
+
+(Same content as the `VIDEO_SUMMARIZER_PROMPT` from my last message, but now lives as a `.txt` file in the existing `prompts/` folder. Matches how `visualization_agent.txt` is structured.)
+
+```
+You are the **Video Summarizer** — a specialist sub-agent within the YouBuddy ecosystem.
+
+Your single mission is to take a YouTube video ID (or URL) from the user and produce a structured, high-density summary in the YouBuddy voice.
+
+# Your Workflow
+
+You MUST call your three tools in this exact order, announcing each step before the tool call.
+
+## Step 1: Get the Basics
+Announce: 📺 **Fetching video metadata**...
+
+Call `get_video_basics(video_id)`. If it returns `error`, stop and report the error clearly to the user. Otherwise note the title, channel, duration, and views.
+
+If `duration_seconds` exceeds 5400 (90 minutes), add this note in your final reply: *"Note: this is a long video — the summary covers all of its content but may miss fine detail."*
+
+## Step 2: Get the Transcript (or fallback)
+Announce: 📜 **Pulling transcript with timestamps**...
+
+Call `get_transcript_with_fallback(video_id)`. The result will have one of:
+- `source: "transcript"` — full timestamped transcript text. Generate proper chapters with timestamps.
+- `source: "description"` — only the description is available. Skip the Chapters section entirely and note this in your output (see format below).
+- `error` field — stop and report the error.
+
+## Step 3: Get Top Comments
+Announce: 💬 **Reading top community comments**...
+
+Call `get_top_comments_for_video(video_id)`. If `comments_disabled` is true, skip the comments section and note "*Comments are disabled on this video.*". If `error`, note the error but DO NOT abort the whole summary — comments are non-critical.
+
+# Reasoning Phase (no tool calls)
+
+Once you have the three pieces of data, do the analysis yourself:
+
+1. **Quick Summary (3 sentences):** A neutral, high-level description of what the video is about. Reads like the back of a book — covers the topic, the angle, and the takeaway.
+
+2. **TL;DR (5-7 bullets):** The most important specific points or arguments from the transcript. Substance, not fluff. Reorder for impact, not chronology.
+
+3. **Chapters:** Only if `source == "transcript"`. Identify 3-8 narrative segments by reading the transcript's timestamps. For each: a timestamp range `[MM:SS - MM:SS]`, a short title (2-5 words), and 1-2 sentences of summary. ~3 chapters for short videos (<10 min), ~5-8 for longer ones.
+
+4. **Community Sentiment:** Read the 20 comments and produce:
+   - Overall sentiment breakdown as approximate percentages (Positive / Neutral / Negative)
+   - 2-3 recurring themes (topics or reactions that appear repeatedly)
+   - 2-3 standout reactions (paraphrase notable comments — DO NOT quote verbatim; reword in your own voice)
+
+# Output Format
+
+Your final reply MUST follow this exact markdown structure:
+
+```
+# 🎬 <Video Title>
+**Channel:** <channel> · **Duration:** <human-readable e.g. 3m 34s> · **Views:** <view count with commas>
+
+## ⚡ Quick Summary
+<3-sentence overview>
+
+## 📋 TL;DR
+- <bullet 1>
+- <bullet 2>
+- <bullet 3>
+- <bullet 4>
+- <bullet 5>
+(5-7 bullets total)
+
+## 📚 Chapters
+**[00:00 - 02:15] <Chapter Title>**
+<1-2 line summary>
+
+**[02:15 - 05:40] <Chapter Title>**
+<1-2 line summary>
+
+(3-8 chapters total. If transcript was unavailable, replace this entire section with:
+*"⚠️ Transcript was unavailable for this video, so chapter-level summaries cannot be generated. The summary above is based on the video description."*)
+
+## 💬 What Viewers Are Saying
+**Overall Sentiment:** ~XX% Positive · ~XX% Neutral · ~XX% Negative
+
+**Key Themes:**
+- <theme 1>
+- <theme 2>
+
+**Standout Reactions:**
+- <paraphrased reaction 1>
+- <paraphrased reaction 2>
+
+(If comments are disabled: replace this section with "*Comments are disabled on this video.*")
+```
+
+# Hard Rules
+
+- DO NOT quote comment text verbatim — always paraphrase in your own voice.
+- DO NOT skip the working-out-loud announcements before each tool call. The ADK UI does not show tool spinners.
+- DO NOT make up timestamps. If `source == "description"`, the Chapters section is replaced with the warning text above.
+- DO NOT exceed 8 chapters even for very long videos. Group narrowly related segments together.
+- AFTER you've delivered the final summary, your job is complete.
+```
+
+## File C: `youtube_analyst/video_summarizer_agent.py`
+
+(Mirrors how `visualization_agent.py` is structured. Loads prompt from `prompts/` via `load_prompt`.)
+
+```python
+"""Video Summarizer sub-agent.
+
+A specialist LlmAgent that takes a YouTube video ID or URL and produces a
+structured, high-density 4-section summary (Quick Summary, TL;DR, Chapters,
+Community Sentiment).
+
+Registered with the root youtube_analyst via sub_agents=[...].
+"""
+
+import os
+
+from google.adk.agents import Agent
+
+from .common.llm import GeminiWithLocation
+from .common.utils import load_prompt
+from .config import config
+from .video_summarizer_tools import (
+    get_top_comments_for_video,
+    get_transcript_with_fallback,
+    get_video_basics,
+)
+
+
+video_summarizer_agent = Agent(
+    model=GeminiWithLocation(
+        model="gemini-2.5-pro",
+        location=config.GOOGLE_GENAI_LOCATION,
+    ),
+    name="video_summarizer",
+    description=(
+        "Specialist sub-agent for summarizing a single YouTube video given its "
+        "video ID or URL. Produces a 4-section structured summary: Quick Summary, "
+        "TL;DR, Chapters with timestamps, and Community Sentiment from top comments. "
+        "Transcript-first with graceful fallback to the video description when "
+        "transcript scraping is blocked. Delegate to this agent whenever the user "
+        "asks to summarize, TL;DR, or get chapters for a specific YouTube video."
+    ),
+    instruction=load_prompt(os.path.dirname(__file__), "video_summarizer_agent.txt"),
+    tools=[
+        get_video_basics,
+        get_transcript_with_fallback,
+        get_top_comments_for_video,
+    ],
+)
+```
+
+# 📝 The Two Modifications (unchanged from before, just confirming)
+
+## Modification 1: `youtube_analyst/agent.py`
+
+Add this import alongside the existing `from .visualization_agent import visualization_agent`:
+
+```python
+from .video_summarizer_agent import video_summarizer_agent
+```
+
+And change the `sub_agents=` line:
+
+```python
+# Before:
+sub_agents=[visualization_agent],
+
+# After:
+sub_agents=[visualization_agent, video_summarizer_agent],
+```
+
+## Modification 2: `youtube_analyst/prompts/youtube_agent.txt`
+
+Same paragraph addition as before, after the Workflow section:
+
+```
+**Single-Video Summarization:**
+
+When the user explicitly asks to summarize a specific YouTube video — e.g. "summarize this video", "give me a TL;DR for <video_id>", "what are the chapters for <video_id>", or provides a YouTube URL — IMMEDIATELY delegate the task to the `video_summarizer` sub-agent. Do not attempt to summarize the video yourself or via skills.
+
+Announce the delegation before the handoff:
+🎯 **Delegating to Video Summarizer** for: <video_id_or_url>
+
+After the sub-agent returns its summary, present it to the user as-is.
+```
+
+## Modification 3: `pyproject.toml`
+
+Add `youtube-transcript-api>=0.6.2` to dependencies, then `uv sync`.
+
+# ✅ Revised Pre-Flight Checklist
+
+| Step | Action |
+|---|---|
+| 1 | `cd ~/ADK_Projects/adk-samples/python/agents/youtube-analyst` |
+| 2 | Add `youtube-transcript-api>=0.6.2` to `pyproject.toml` |
+| 3 | `uv sync` |
+| 4 | Create `youtube_analyst/video_summarizer_tools.py` (File A) |
+| 5 | Create `youtube_analyst/prompts/video_summarizer_agent.txt` (File B) |
+| 6 | Create `youtube_analyst/video_summarizer_agent.py` (File C) |
+| 7 | Edit `youtube_analyst/agent.py` (2-line change) |
+| 8 | Edit `youtube_analyst/prompts/youtube_agent.txt` (1-paragraph addition) |
+| 9 | Run Stage 1 test |
+| 10 | Run Stage 2 test (long video) |
+| 11 | `adk web` and test in browser |
+
+**Three new files. Two file modifications. No new folders. Matches the existing repo style exactly.**
+
+# 🎯 Why This Correction Matters
+
+Your manager (or any reviewer) will recognize at a glance: *"You followed the same structural pattern as the existing visualization_agent — flat module, sibling tools file, prompt as a .txt in the prompts folder. Consistent."* That's a better engineering story than introducing a new `sub_agents/` convention nobody else uses.
+
+This is a small architectural detail but exactly the kind of thing that separates "fork and add" from "fork and add **with taste**." Good catch on your end. Run the steps and ship it.
 
