@@ -1341,3 +1341,131 @@ Specifically I want to see:
 4. **The final SUMMARY verdict**
 
 Once we see those numbers, we know exactly what to build. If Flash is 20-30s for D.B. Cooper, you have a great demo. If it's 60s+, we may want to consider just shipping Option A. We let the data decide — no more arguing in the abstract.
+
+
+-----------------------
+
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_gemini_multimodal_prereqs.py
+warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
+- index
+✓ Loaded .env file
+
+🎬 Pre-flight test: Gemini multimodal YouTube URL processing
+
+======================================================================
+ENVIRONMENT CHECK
+======================================================================
+✅ GOOGLE_CLOUD_PROJECT:      ai-ml-learning-xwf
+✅ GOOGLE_CLOUD_LOCATION:     us-central1
+⚠️  GOOGLE_GENAI_USE_VERTEXAI: 1
+✅ Initialized Vertex AI Gemini client
+
+======================================================================
+TESTING: Rick Astley (short, 3m34s) — basic multimodal sanity check
+URL:     https://www.youtube.com/watch?v=dQw4w9WgXcQ
+======================================================================
+⏱️  Calling gemini-2.5-pro with YouTube URL (may take 30-90 seconds)...
+✅ SUCCESS in 37.0s
+✅ Output length: 1641 chars
+✅ Timestamp markers found: 22
+
+--- FIRST 1000 CHARS OF OUTPUT ---
+[00:02] Rick Astley sings into a vintage microphone while wearing a striped shirt and a black blazer.
+[00:07] Rick Astley dances in a white trench coat in front of a brick wall with arches.
+[00:11] Wearing a full denim outfit and sunglasses, Rick Astley dances next to a chain-link fence.
+[00:18] Rick Astley sings the opening line of the song, "We're no strangers to love."
+[00:30] The shadow of a person dancing is cast on the concrete ground.
+[00:35] Rick Astley sings, "I just wanna tell you how I'm feeling."
+[00:43] Rick Astley sings the first line of the chorus, "Never gonna give you up."
+[00:51] A bartender in a white shirt and red suspenders wipes down the bar.
+[00:54] Rick Astley and two female dancers perform on a stage in a large hall.
+[01:01] Rick Astley sings the second verse, "We've known each other for so long."
+[01:15] The bartender dances energetically behind the bar.
+[01:25] Rick Astley sings the chorus, "Never gonna give you up," in the night street scene.
+[01:34] The bar
+... (641 more chars)
+--- END ---
+
+======================================================================
+TESTING: LEMMiNO D.B. Cooper (medium, 28m) — your actual failing case
+URL:     https://www.youtube.com/watch?v=CbUjuwhQPKs
+======================================================================
+⏱️  Calling gemini-2.5-pro with YouTube URL (may take 30-90 seconds)...
+✅ SUCCESS in 110.7s
+✅ Output length: 483 chars
+✅ Timestamp markers found: 6
+
+--- FIRST 1000 CHARS OF OUTPUT ---
+[00:00] The video opens with the "LEMMiNO" channel logo.
+[00:10] An animation shows a figure jumping from the aft stairs of a Boeing 727.
+[00:41] The title card "THE SEARCH FOR D. B. Cooper" appears over an animated forest.
+[00:52] The video introduces "CHAPTER 1: The Hijacking".
+[01:12] A close-up of the plane ticket shows the name "Dan Cooper" handwritten in red.
+[01:40] The hijacker's note is shown, reading "MISS - I have a bomb here and I would like you to sit by me."
+[01:53
+--- END ---
+
+======================================================================
+SUMMARY
+======================================================================
+  ✅ dQw4w9WgXcQ       37.0s   1641 chars  timestamps: ✅ rich (22)
+  ✅ CbUjuwhQPKs      110.7s    483 chars  timestamps: ⚠️  sparse (6)
+
+⚠️  OPTION B PARTIALLY VIABLE — multimodal works but output is sparse.
+   We can still use it, but may need prompt tuning for better chapters.
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_gemini_multimodal_flash.py
+warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
+- index
+✓ Loaded .env file
+
+🎬 Pre-flight test v2: Flash multimodal + category-aware routing
+
+======================================================================
+ENVIRONMENT CHECK
+======================================================================
+✅ GOOGLE_CLOUD_PROJECT:      ai-ml-learning-xwf
+✅ GOOGLE_CLOUD_LOCATION:     us-central1
+⚠️  GOOGLE_GENAI_USE_VERTEXAI: 1
+✅ YOUTUBE_API_KEY:           AIzaSyCJ...
+✅ Initialized Vertex AI Gemini client
+
+======================================================================
+TESTING: Rick Astley song (dQw4w9WgXcQ)
+EXPECTED CATEGORY: 10 (Music)
+EXPECTED ROUTING:  SKIP CHAPTERS — no multimodal call
+======================================================================
+📺 Fetching metadata...
+   Title:             Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)
+   Channel:           Rick Astley
+   categoryId:        10
+   caption available: true
+   ➜ ROUTING DECISION: SKIP chapters (category=10 Music)
+   ➜ In production, multimodal would NOT be called for this video.
+
+======================================================================
+TESTING: LEMMiNO D.B. Cooper documentary (CbUjuwhQPKs)
+EXPECTED CATEGORY: 24 (Entertainment) — variable
+EXPECTED ROUTING:  TRY CHAPTERS — multimodal fallback if scrape fails
+======================================================================
+📺 Fetching metadata...
+   Title:             The Search For D. B. Cooper
+   Channel:           LEMMiNO
+   categoryId:        24
+   caption available: true
+   ➜ ROUTING DECISION: ATTEMPT chapters (category=24 is chapter-worthy)
+   ➜ Proceeding with Gemini 2.5 Flash multimodal call...
+⏱️  Calling gemini-2.5-flash with https://www.youtube.com/watch?v=CbUjuwhQPKs
+    (this should be FASTER than the gemini-2.5-pro test)
+❌ FLASH CALL FAILED after 6.8s
+   Error: ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.DebugInfo', 'detail': '[ORIGINAL ERROR] generic::resource_exhausted: Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details. [google.rpc.error_details_ext] { message: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." } 525003295 { 1 { 1 { 1 { 2: "Cardolan" 3: "GenerateContent" } 2 { 1: 8 2: "generic" 3: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." 5 { 1 { 2: 82012934 3 { 2: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." } } } } 8: 1 10 { 1: 13 } } 2: "VertexServingRpcRoot" } }'}]}}
+
+======================================================================
+SUMMARY
+======================================================================
+  ✅ dQw4w9WgXcQ      category=10 (Music)  ➜ SKIPPED multimodal (correct routing)
+  ❌ CbUjuwhQPKs      FAILED: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.DebugInfo', 'detail': '[ORIGINAL ERROR] generic::resource_exhausted: Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details. [google.rpc.error_details_ext] { message: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." } 525003295 { 1 { 1 { 1 { 2: "Cardolan" 3: "GenerateContent" } 2 { 1: 8 2: "generic" 3: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." 5 { 1 { 2: 82012934 3 { 2: "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details." } } } } 8: 1 10 { 1: 13 } } 2: "VertexServingRpcRoot" } }'}]}}
+
+👍 Routing logic verified: Music category correctly skipped.
+   But no multimodal calls were tested — try adding a non-music video.
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ 
+
