@@ -937,50 +937,344 @@ This is a small architectural detail but exactly the kind of thing that separate
 
 -------------------------
 
-#1
-please summerise the video with video id 'CbUjuwhQPKs'
+Smart call. Option B done right will make your demo significantly stronger. Let me give you the pre-flight test first — we don't write any production code until this passes.
 
-#2
-🎯 Delegating to Video Summarizer for: CbUjuwhQPKs
+# 🎯 What This Test Proves
 
-#3
-#4
-📺 Fetching video metadata...
+Before adding multimodal as a fallback in your tool, we need to verify three things on YOUR specific cloudtop + AltStrat GCP setup:
 
-#5
-#6
-📜 Pulling transcript with timestamps...
+1. **Vertex AI access works** with your Application Default Credentials
+2. **VPC Service Controls don't block YouTube URL processing** in Gemini calls (this is the #1 risk on enterprise GCP)
+3. **Gemini 2.5 Pro produces transcript-quality output** with timestamps when fed a YouTube URL
 
-#7
-#8
-💬 Reading top community comments...
+If any of these fail, we adjust the design or fall back to Option A — no wasted code.
 
-#9
-#10
-🎬 The Search For D. B. Cooper Channel: LEMMiNO · Duration: 29m 27s · Views: 23551369
+# 📝 The Pre-Flight Test File
 
-⚡ Quick Summary This video documentary explores the enduring mystery of D.B. Cooper, one of America's most famous unsolved cases. It recounts the audacious 1971 hijacking of a Boeing 727, where a man extorted $200,000 before parachuting from the aircraft and vanishing without a trace. The video delves into the details of the subsequent manhunt, the scant evidence left behind, and the various compelling suspects identified over the years.
+Save this as `~/ADK_Projects/adk-samples/python/agents/youtube-analyst/test_gemini_multimodal_prereqs.py` (same directory as your previous test, picks up the same `.env`):
 
-📋 TL;DR
+```python
+"""Pre-flight test for Gemini multimodal YouTube URL processing.
 
-In 1971, a man calling himself Dan Cooper hijacked a Northwest Airlines flight.
-He demanded and received a ransom of $200,000 and four parachutes.
-He then ordered the plane to fly towards Mexico City and jumped from the rear airstair somewhere over the Pacific Northwest.
-An exhaustive FBI investigation, codenamed NORJAK, failed to determine his true identity or whereabouts.
-In 1980, a boy found a decaying packet of the ransom money, deepening the mystery of Cooper's fate.
-The video analyzes several key suspects, weighing the evidence that points towards and against each of them.
-To this day, the D.B. Cooper case remains the only unsolved skyjacking in U.S. commercial aviation history.
-⚠️ Transcript was unavailable for this video, so chapter-level summaries cannot be generated. The summary above is based on the video description.
+Verifies that Gemini 2.5 Pro can process YouTube videos via Part.from_uri
+in YOUR specific GCP environment (VPC-SC, region, ADC, etc.).
 
-💬 What Viewers Are Saying Overall Sentiment: ~70% Positive · ~30% Neutral · ~0% Negative
+This must PASS before we add multimodal as a fallback in the summarizer tool.
 
-Key Themes:
+Tests three scenarios:
+  1. Short video (~3.5 min) — proves basic multimodal works
+  2. Medium video (~28 min) — proves the actual failing case from your demo
+  3. Output quality — checks if Gemini gives us timestamped output we can use
+"""
 
-Speculation and Humor: A large number of comments involve humorous scenarios imagining an elderly D.B. Cooper alive today, watching the video or trying to confess to disbelieving nurses.
-Admiration for the Audacity: Many viewers express a sort of respect for the "nerves of steel" Cooper displayed, with some romanticizing him as a folk hero or an action movie protagonist.
-Praise for Video Quality: The high production value of the documentary is a recurring theme, with one popular comment joking that it feels like a "YouTube Premium" video.
-Standout Reactions:
+import os
+import sys
+import time
 
-Many viewers are amused by the idea that D.B. Cooper might be an old man now, watching the video and thinking to himself, "I got away with it."
-There's a strong sense of admiration for Cooper's calm and polite demeanor during the hijacking, with some jokingly suggesting this proves he must have been Canadian.
-Viewers appreciate the deep dive into the case, with some offering their own detailed technical analyses of the jump and the equipment Cooper would have needed to survive.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✓ Loaded .env file")
+except ImportError:
+    print("⚠️  python-dotenv not installed. Reading env vars from shell only.")
+
+
+# Test videos
+TEST_VIDEOS = [
+    {
+        "id": "dQw4w9WgXcQ",
+        "title": "Rick Astley (short, 3m34s) — basic multimodal sanity check",
+    },
+    {
+        "id": "CbUjuwhQPKs",
+        "title": "LEMMiNO D.B. Cooper (medium, 28m) — your actual failing case",
+    },
+]
+
+CHAPTER_EXTRACTION_PROMPT = """You are analyzing a YouTube video. Produce a transcript-like \
+timestamped breakdown of the video content.
+
+Format your response as plain text with one line per significant moment, using this exact format:
+[MM:SS] <one-sentence description of what is being said or shown at this timestamp>
+
+Aim for 15-30 timestamps total, distributed across the video's duration.
+Be factual and concrete. Do not summarize — describe what is actually happening.
+"""
+
+
+def check_environment() -> dict[str, str] | None:
+    """Verify required environment variables are present."""
+    print()
+    print("=" * 70)
+    print("ENVIRONMENT CHECK")
+    print("=" * 70)
+
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+    use_vertex = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower()
+
+    if not project:
+        print("❌ GOOGLE_CLOUD_PROJECT not set in environment or .env")
+        return None
+
+    print(f"✅ GOOGLE_CLOUD_PROJECT:      {project}")
+    print(f"✅ GOOGLE_CLOUD_LOCATION:     {location}")
+    print(f"{'✅' if use_vertex == 'true' else '⚠️ '} GOOGLE_GENAI_USE_VERTEXAI: {use_vertex or '(not set)'}")
+
+    return {"project": project, "location": location}
+
+
+def test_video(client, video: dict[str, str]) -> dict:
+    """Run multimodal call against one video. Returns timing + output info."""
+    from google.genai.types import GenerateContentConfig, Part
+
+    video_id = video["id"]
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+    print()
+    print("=" * 70)
+    print(f"TESTING: {video['title']}")
+    print(f"URL:     {video_url}")
+    print("=" * 70)
+    print("⏱️  Calling gemini-2.5-pro with YouTube URL (may take 30-90 seconds)...")
+
+    start = time.time()
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-pro",
+            contents=[
+                Part.from_uri(file_uri=video_url, mime_type="video/mp4"),
+                CHAPTER_EXTRACTION_PROMPT,
+            ],
+            config=GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=4096,
+            ),
+        )
+        elapsed = time.time() - start
+    except Exception as e:
+        elapsed = time.time() - start
+        print(f"❌ FAILED after {elapsed:.1f}s")
+        print(f"   Error type: {type(e).__name__}")
+        print(f"   Error message: {e}")
+        print()
+        diagnose_error(e)
+        return {"success": False, "error": str(e), "elapsed": elapsed}
+
+    text = response.text or ""
+    print(f"✅ SUCCESS in {elapsed:.1f}s")
+    print(f"✅ Output length: {len(text)} chars")
+
+    # Quality check — does the output have timestamps?
+    import re
+    timestamp_lines = re.findall(r"\[\d{1,2}:\d{2}\]", text)
+    print(f"✅ Timestamp markers found: {len(timestamp_lines)}")
+
+    print()
+    print("--- FIRST 1000 CHARS OF OUTPUT ---")
+    print(text[:1000])
+    if len(text) > 1000:
+        print(f"... ({len(text) - 1000} more chars)")
+    print("--- END ---")
+
+    return {
+        "success": True,
+        "elapsed": elapsed,
+        "output_chars": len(text),
+        "timestamp_count": len(timestamp_lines),
+        "sample": text[:500],
+    }
+
+
+def diagnose_error(error: Exception) -> None:
+    """Provide actionable next steps based on error type."""
+    err_str = str(error).lower()
+
+    print("Diagnosis:")
+    if "permission" in err_str or "403" in err_str or "vpc" in err_str:
+        print("  🚨 Likely VPC Service Controls blocking YouTube URL access.")
+        print("     AltStrat may have VPC-SC enabled on this project.")
+        print("     → Option B is not viable. Ship Option A instead.")
+        print("     → To confirm: ask AltStrat infra if VPC-SC is on this project.")
+    elif "invalid_argument" in err_str or "400" in err_str:
+        if "youtube" in err_str or "uri" in err_str:
+            print("  🚨 Region doesn't support YouTube URL processing.")
+            print(f"     → Try setting GOOGLE_CLOUD_LOCATION=global and rerun.")
+        else:
+            print("  🚨 API rejected the request (bad parameters).")
+            print("     → Check that gemini-2.5-pro is available in your region.")
+    elif "credentials" in err_str or "unauthenticated" in err_str or "401" in err_str:
+        print("  🚨 Application Default Credentials not set up.")
+        print("     → Run: gcloud auth application-default login")
+    elif "quota" in err_str or "429" in err_str:
+        print("  🚨 Rate limited or quota exceeded.")
+        print("     → Wait a few minutes and retry, or check quota in Cloud Console.")
+    elif "deadline" in err_str or "timeout" in err_str:
+        print("  ⚠️  Request timed out. Video may be too long or service is slow.")
+        print("     → Try the short video first. If that works, we may need to")
+        print("       limit multimodal to videos under N minutes.")
+    elif "not found" in err_str or "404" in err_str:
+        print("  🚨 Model or endpoint not found.")
+        print("     → gemini-2.5-pro may not be available in your region.")
+        print("     → Check Vertex AI Model Garden for available models.")
+    else:
+        print("  ❓ Unfamiliar error. Send full error to the engineer.")
+
+
+def main() -> int:
+    print()
+    print("🎬 Pre-flight test: Gemini multimodal YouTube URL processing")
+
+    env = check_environment()
+    if not env:
+        return 1
+
+    try:
+        from google import genai
+        from google.genai.types import HttpOptions
+    except ImportError:
+        print()
+        print("❌ google-genai not installed.")
+        print("   Run: uv pip install google-genai")
+        return 1
+
+    try:
+        client = genai.Client(
+            vertexai=True,
+            project=env["project"],
+            location=env["location"],
+            http_options=HttpOptions(api_version="v1"),
+        )
+        print(f"✅ Initialized Vertex AI Gemini client")
+    except Exception as e:
+        print(f"❌ Failed to initialize client: {type(e).__name__}: {e}")
+        return 1
+
+    results = []
+    for video in TEST_VIDEOS:
+        result = test_video(client, video)
+        results.append((video, result))
+
+    # ---- Summary ----
+    print()
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+
+    for video, result in results:
+        if result["success"]:
+            ts_quality = (
+                "✅ rich" if result["timestamp_count"] >= 10
+                else "⚠️  sparse" if result["timestamp_count"] >= 3
+                else "❌ none"
+            )
+            print(
+                f"  ✅ {video['id']:15s}  "
+                f"{result['elapsed']:5.1f}s  "
+                f"{result['output_chars']:5d} chars  "
+                f"timestamps: {ts_quality} ({result['timestamp_count']})"
+            )
+        else:
+            print(f"  ❌ {video['id']:15s}  FAILED")
+
+    print()
+    all_pass = all(r[1]["success"] for r in results)
+    rich_timestamps = all(
+        r[1].get("timestamp_count", 0) >= 10 for r in results if r[1]["success"]
+    )
+
+    if all_pass and rich_timestamps:
+        print("👍 OPTION B IS VIABLE — both videos processed with rich timestamps.")
+        print("   Proceed with adding Gemini multimodal as the middle fallback.")
+        return 0
+    elif all_pass and not rich_timestamps:
+        print("⚠️  OPTION B PARTIALLY VIABLE — multimodal works but output is sparse.")
+        print("   We can still use it, but may need prompt tuning for better chapters.")
+        return 0
+    elif any(r[1]["success"] for r in results):
+        print("⚠️  PARTIAL — some videos work, some don't.")
+        print("   We can add multimodal as fallback but it won't always succeed.")
+        print("   Triple fallback chain still beats current behavior.")
+        return 0
+    else:
+        print("❌ OPTION B NOT VIABLE in this environment.")
+        print("   Stick with Option A (description fallback only).")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+# 🚀 How To Run
+
+Inside the `youtube-analyst/` directory:
+
+```bash
+# Verify gcloud auth is set up (you've done this already, just confirming)
+gcloud auth application-default login
+
+# Confirm your .env has the right vars (existing agent uses them too)
+grep -E "^(GOOGLE_CLOUD_PROJECT|GOOGLE_CLOUD_LOCATION|GOOGLE_GENAI_USE_VERTEXAI)" .env
+
+# google-genai should already be installed (agent uses it). Verify:
+uv pip list | grep -i google-genai
+
+# If missing for any reason:
+# uv pip install google-genai
+
+# Run the test
+uv run python test_gemini_multimodal_prereqs.py
+```
+
+# 📋 What I Need You To Send Me
+
+Paste the **complete output**. Specifically I'm looking at:
+
+1. **Environment check section** — confirms vars are set correctly
+2. **Both video test results** — success/failure timing, output samples
+3. **Summary block at the bottom** — the verdict
+
+# 📊 How To Read The Results
+
+There are four possible outcomes and what each means:
+
+**Outcome 1: Both videos succeed, both have 10+ timestamps**
+→ Green light. Multimodal fallback will work great. I send you the production code.
+
+**Outcome 2: Both succeed but sparse timestamps (3-9)**
+→ Yellow light. We add multimodal but with stricter prompt to force more timestamps. Still better than description fallback.
+
+**Outcome 3: Short succeeds, long fails (likely timeout)**
+→ Yellow light. We add multimodal with a duration check — only use it for videos under ~45 minutes. Long videos still fall back to description.
+
+**Outcome 4: Both fail with permission/VPC errors**
+→ Red light. AltStrat has VPC-SC enabled and blocks this. We abandon Option B and ship Option A with a strong demo story. **No code changes needed in this case.**
+
+# ⏱️ Expected Timing
+
+- Short video (Rick Astley): 15-45 seconds
+- Medium video (D.B. Cooper): 60-120 seconds
+- Total test runtime: ~2-4 minutes
+
+If a single video call exceeds 3 minutes, kill the test (Ctrl+C) and report — that itself is useful information.
+
+# ⚠️ Cost Heads-Up
+
+This test will charge your AltStrat GCP project. Estimated cost: **~$0.05-0.15 total** for both videos. Set a $5 billing alert in Cloud Console if you haven't already, just for peace of mind.
+
+# 🛡️ What I Promise Before Adding Anything
+
+Even after this test passes, the production change will be **purely additive**:
+
+- `video_summarizer_tools.py` gets ONE new private helper function
+- `get_transcript_with_fallback` gets ONE new try/except block inserted between the existing transcript and description paths
+- The existing transcript path stays exactly as it is (still tried first, free, fast)
+- The existing description fallback stays exactly as it is (still tried last, free, always-works)
+- No changes to the agent definition, the prompt, the root agent, or any other file
+- The sub-agent's prompt doesn't need to know multimodal exists — the new path is invisible to it
+- If multimodal silently fails or times out, the description fallback catches it — your demo never crashes
+
+**The current working behavior is preserved, period.** Multimodal is added as a middle option that only fires when transcript fails. If multimodal also fails, you land exactly where you are today (description fallback). Worst case: same behavior as now. Best case: real chapters with timestamps.
+
+**Run the test, paste the output. I write the production code only after we know multimodal works for you.**
