@@ -1278,3 +1278,77 @@ Even after this test passes, the production change will be **purely additive**:
 **The current working behavior is preserved, period.** Multimodal is added as a middle option that only fires when transcript fails. If multimodal also fails, you land exactly where you are today (description fallback). Worst case: same behavior as now. Best case: real chapters with timestamps.
 
 **Run the test, paste the output. I write the production code only after we know multimodal works for you.**
+
+
+-------
+
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_gemini_multimodal_prereqs.py
+warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
+- index
+✓ Loaded .env file
+
+🎬 Pre-flight test: Gemini multimodal YouTube URL processing
+
+======================================================================
+ENVIRONMENT CHECK
+======================================================================
+✅ GOOGLE_CLOUD_PROJECT:      ai-ml-learning-xwf
+✅ GOOGLE_CLOUD_LOCATION:     us-central1
+⚠️  GOOGLE_GENAI_USE_VERTEXAI: 1
+✅ Initialized Vertex AI Gemini client
+
+======================================================================
+TESTING: Rick Astley (short, 3m34s) — basic multimodal sanity check
+URL:     https://www.youtube.com/watch?v=dQw4w9WgXcQ
+======================================================================
+⏱️  Calling gemini-2.5-pro with YouTube URL (may take 30-90 seconds)...
+✅ SUCCESS in 37.0s
+✅ Output length: 1641 chars
+✅ Timestamp markers found: 22
+
+--- FIRST 1000 CHARS OF OUTPUT ---
+[00:02] Rick Astley sings into a vintage microphone while wearing a striped shirt and a black blazer.
+[00:07] Rick Astley dances in a white trench coat in front of a brick wall with arches.
+[00:11] Wearing a full denim outfit and sunglasses, Rick Astley dances next to a chain-link fence.
+[00:18] Rick Astley sings the opening line of the song, "We're no strangers to love."
+[00:30] The shadow of a person dancing is cast on the concrete ground.
+[00:35] Rick Astley sings, "I just wanna tell you how I'm feeling."
+[00:43] Rick Astley sings the first line of the chorus, "Never gonna give you up."
+[00:51] A bartender in a white shirt and red suspenders wipes down the bar.
+[00:54] Rick Astley and two female dancers perform on a stage in a large hall.
+[01:01] Rick Astley sings the second verse, "We've known each other for so long."
+[01:15] The bartender dances energetically behind the bar.
+[01:25] Rick Astley sings the chorus, "Never gonna give you up," in the night street scene.
+[01:34] The bar
+... (641 more chars)
+--- END ---
+
+======================================================================
+TESTING: LEMMiNO D.B. Cooper (medium, 28m) — your actual failing case
+URL:     https://www.youtube.com/watch?v=CbUjuwhQPKs
+======================================================================
+⏱️  Calling gemini-2.5-pro with YouTube URL (may take 30-90 seconds)...
+✅ SUCCESS in 110.7s
+✅ Output length: 483 chars
+✅ Timestamp markers found: 6
+
+--- FIRST 1000 CHARS OF OUTPUT ---
+[00:00] The video opens with the "LEMMiNO" channel logo.
+[00:10] An animation shows a figure jumping from the aft stairs of a Boeing 727.
+[00:41] The title card "THE SEARCH FOR D. B. Cooper" appears over an animated forest.
+[00:52] The video introduces "CHAPTER 1: The Hijacking".
+[01:12] A close-up of the plane ticket shows the name "Dan Cooper" handwritten in red.
+[01:40] The hijacker's note is shown, reading "MISS - I have a bomb here and I would like you to sit by me."
+[01:53
+--- END ---
+
+======================================================================
+SUMMARY
+======================================================================
+  ✅ dQw4w9WgXcQ       37.0s   1641 chars  timestamps: ✅ rich (22)
+  ✅ CbUjuwhQPKs      110.7s    483 chars  timestamps: ⚠️  sparse (6)
+
+⚠️  OPTION B PARTIALLY VIABLE — multimodal works but output is sparse.
+   We can still use it, but may need prompt tuning for better chapters.
+karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ 
+
