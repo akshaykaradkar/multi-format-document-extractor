@@ -1345,143 +1345,1007 @@ Once we see those numbers, we know exactly what to build. If Flash is 20-30s for
 
 -----------------------
 
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_gemini_multimodal_flash.py
-warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
-- index
-✓ Loaded .env file
+Locking it in. Here's the complete production patch — every file in full, ready to paste.
 
-🎬 Pre-flight test v2: Flash multimodal + category-aware routing
+# 📁 What You're Adding/Modifying
 
-======================================================================
-ENVIRONMENT CHECK
-======================================================================
-✅ GOOGLE_CLOUD_PROJECT:      ai-ml-learning-xwf
-✅ GOOGLE_CLOUD_LOCATION:     us-central1
-⚠️  GOOGLE_GENAI_USE_VERTEXAI: 1
-✅ YOUTUBE_API_KEY:           AIzaSyCJ...
-✅ Initialized Vertex AI Gemini client
+```
+youtube_analyst/
+├── agent.py                              ← MODIFY (2 lines added)
+├── video_summarizer_agent.py             ← NEW
+├── video_summarizer_tools.py             ← NEW
+└── prompts/
+    ├── youtube_agent.txt                 ← MODIFY (1 paragraph added)
+    └── video_summarizer_agent.txt        ← NEW
+```
 
-======================================================================
-TESTING: Rick Astley song (dQw4w9WgXcQ)
-EXPECTED CATEGORY: 10 (Music)
-EXPECTED ROUTING:  SKIP CHAPTERS — no multimodal call
-======================================================================
-📺 Fetching metadata...
-   Title:             Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)
-   Channel:           Rick Astley
-   categoryId:        10
-   caption available: true
-   ➜ ROUTING DECISION: SKIP chapters (category=10 Music)
-   ➜ In production, multimodal would NOT be called for this video.
+Plus `pyproject.toml` gets one new dependency, and `.env` gets one new flag.
 
-======================================================================
-TESTING: LEMMiNO D.B. Cooper documentary (CbUjuwhQPKs)
-EXPECTED CATEGORY: 24 (Entertainment) — variable
-EXPECTED ROUTING:  TRY CHAPTERS — multimodal fallback if scrape fails
-======================================================================
-📺 Fetching metadata...
-   Title:             The Search For D. B. Cooper
-   Channel:           LEMMiNO
-   categoryId:        24
-   caption available: true
-   ➜ ROUTING DECISION: ATTEMPT chapters (category=24 is chapter-worthy)
-   ➜ Proceeding with Gemini 2.5 Flash multimodal call...
-⏱️  Calling gemini-2.5-flash with https://www.youtube.com/watch?v=CbUjuwhQPKs
-    (this should be FASTER than the gemini-2.5-pro test)
-✅ Flash call SUCCEEDED in 121.7s
-   Output: 10779 chars, 154 timestamp markers
+---
 
---- FIRST 800 CHARS OF FLASH OUTPUT ---
-Here's a timestamped breakdown of the video content:
+# 📄 FILE 1 (NEW): `youtube_analyst/video_summarizer_tools.py`
 
-[00:00] The video begins with a black screen and a voice saying "Just let me know."
-[00:05] An animated airplane is shown flying through a starry sky, then a close-up of its underside.
-[00:15] A red silhouette of a person falls from the plane's aft stairway.
-[00:20] The red silhouette freefalls through the dark, starry sky.
-[00:30] The silhouette falls towards a stylized forest of white and grey trees.
-[00:41] The title "THE SEARCH FOR D. B. COOPER" appears over the forest.
-[00:54] Chapter 1 title card: "The Hijacking".
-[00:59] A map shows Portland, Oregon, and the flight path to Seattle, Washington.
-[01:09] A close-up of a Northwest Orient plane ticket with "Dan Cooper" handwritten on it.
-[01:20] A diagram of the plane's interior shows
-... (9979 more chars)
---- END ---
+This is the complete tools file. Three production tools with the full fallback chain, category-aware routing, and feature flag handling.
 
-======================================================================
-SUMMARY
-======================================================================
-  ✅ dQw4w9WgXcQ      category=10 (Music)  ➜ SKIPPED multimodal (correct routing)
-  ✅ CbUjuwhQPKs      category=24  flash=121.7s  chapters=✅ rich (154)
+```python
+"""Tools for the video_summarizer sub-agent.
 
-⚠️  Flash is slower than expected (121.7s avg).
-   Consider whether the demo can tolerate this latency.
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ uv run python test_gemini_multimodal_flash.py
-warning: Found both a `uv.toml` file and a `[tool.uv]` section in an adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be ignored in favor of the `uv.toml` file:
-- index
-✓ Loaded .env file
+Three focused fetch tools that the sub-agent orchestrates to produce
+multi-section YouTube video summaries:
 
-🎬 Pre-flight test v2: Flash multimodal + category-aware routing
+  1. get_video_basics              — metadata + category-based routing signal
+  2. get_video_transcript_smart    — transcript scrape -> multimodal -> description
+  3. get_top_comments_for_video    — top 20 comments by YouTube relevance
 
-======================================================================
-ENVIRONMENT CHECK
-======================================================================
-✅ GOOGLE_CLOUD_PROJECT:      ai-ml-learning-xwf
-✅ GOOGLE_CLOUD_LOCATION:     us-central1
-⚠️  GOOGLE_GENAI_USE_VERTEXAI: 1
-✅ YOUTUBE_API_KEY:           AIzaSyCJ...
-✅ Initialized Vertex AI Gemini client
+Design notes
+------------
+* All tools return dicts. On failure they return {"error": "..."} (no exceptions
+  propagate up to the LlmAgent). This keeps the sub-agent's reasoning loop simple.
+* The transcript tool implements a 3-tier fallback chain, gated by an env flag
+  for the (slow but powerful) Gemini multimodal middle tier.
+* Category-aware routing lives in `get_video_basics` — it adds a `should_attempt_chapters`
+  hint based on YouTube's own categoryId. The sub-agent reads this and acts accordingly.
+* All YouTube Data API calls cost 1 quota unit each. The transcript scrape is free.
+  The multimodal fallback uses a Vertex AI Gemini call (Flash model).
 
-======================================================================
-TESTING: Rick Astley song (dQw4w9WgXcQ)
-EXPECTED CATEGORY: 10 (Music)
-EXPECTED ROUTING:  SKIP CHAPTERS — no multimodal call
-======================================================================
-📺 Fetching metadata...
-   Title:             Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)
-   Channel:           Rick Astley
-   categoryId:        10
-   caption available: true
-   ➜ ROUTING DECISION: SKIP chapters (category=10 Music)
-   ➜ In production, multimodal would NOT be called for this video.
+Total quota cost per full summary: 2 YouTube Data API units (metadata + comments).
+Multimodal cost (only when triggered): ~$0.01-0.05 per call on Gemini 2.5 Flash.
+"""
 
-======================================================================
-TESTING: LEMMiNO D.B. Cooper documentary (CbUjuwhQPKs)
-EXPECTED CATEGORY: 24 (Entertainment) — variable
-EXPECTED ROUTING:  TRY CHAPTERS — multimodal fallback if scrape fails
-======================================================================
-📺 Fetching metadata...
-   Title:             The Search For D. B. Cooper
-   Channel:           LEMMiNO
-   categoryId:        24
-   caption available: true
-   ➜ ROUTING DECISION: ATTEMPT chapters (category=24 is chapter-worthy)
-   ➜ Proceeding with Gemini 2.5 Flash multimodal call...
-⏱️  Calling gemini-2.5-flash with https://www.youtube.com/watch?v=CbUjuwhQPKs
-    (this should be FASTER than the gemini-2.5-pro test)
-✅ Flash call SUCCEEDED in 95.3s
-   Output: 2127 chars, 20 timestamp markers
+import os
+import re
+from typing import Any
 
---- FIRST 800 CHARS OF FLASH OUTPUT ---
-[00:00] The video begins with a black screen and a faint, suspenseful musical score.
-[00:01] The word "LEMMiNO" appears in a white, stylized font on the black screen.
-[00:05] A white outline of an airplane emerges from a starry black background, flying towards the viewer.
-[00:10] The airplane outline rotates to a side view, and a small red figure is seen falling from its underside.
-[00:18] A red silhouette of a person freefalling is shown against the starry black background.
-[00:34] A stylized forest of grey and white pine trees appears, with the small red silhouette of the person falling above them.
-[00:42] The title "THE SEARCH FOR D. B. COOPER" appears in red and white text over a brushstroke-like background, superimposed on the forest.
-[00:55] A chapter title "CHAPTER 1: The Hijacking"
-... (1327 more chars)
---- END ---
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-======================================================================
-SUMMARY
-======================================================================
-  ✅ dQw4w9WgXcQ      category=10 (Music)  ➜ SKIPPED multimodal (correct routing)
-  ✅ CbUjuwhQPKs      category=24  flash= 95.3s  chapters=✅ rich (20)
+# ---------------------------------------------------------------------------
+# Category routing — based on YouTube's own categoryId classification
+# ---------------------------------------------------------------------------
+# Categories where chapter generation produces poor results (songs are not
+# narratives; comedy clips and shorts are too brief to chapterize meaningfully).
+# When a video falls in these categories, the sub-agent skips multimodal fallback
+# entirely and produces a 3-section summary (no chapters).
 
-⚠️  Flash is slower than expected (95.3s avg).
-   Consider whether the demo can tolerate this latency.
-karadkar@aks-learn:~/ADK_Projects/adk-samples/python/agents/youtube-analyst$ 
+_SKIP_CHAPTER_CATEGORIES: dict[str, str] = {
+    "10": "Music",
+    "15": "Pets & Animals",
+    "18": "Short Movies",
+    "23": "Comedy",
+}
+
+# ---------------------------------------------------------------------------
+# Helpers (private)
+# ---------------------------------------------------------------------------
+
+_VIDEO_ID_RE = re.compile(r"[a-zA-Z0-9_-]{11}")
+
+
+def _extract_video_id(maybe_url_or_id: str) -> str:
+    """Accept a bare 11-char video ID or any common YouTube URL form."""
+    s = (maybe_url_or_id or "").strip()
+    if _VIDEO_ID_RE.fullmatch(s):
+        return s
+    for pattern in (
+        r"youtu\.be/([a-zA-Z0-9_-]{11})",
+        r"[?&]v=([a-zA-Z0-9_-]{11})",
+        r"/(?:shorts|embed|v)/([a-zA-Z0-9_-]{11})",
+    ):
+        m = re.search(pattern, s)
+        if m:
+            return m.group(1)
+    raise ValueError(f"Could not extract YouTube video ID from: {maybe_url_or_id!r}")
+
+
+def _get_youtube_client():
+    """Build a YouTube Data API v3 client from the YOUTUBE_API_KEY env var."""
+    api_key = os.environ.get("YOUTUBE_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "YOUTUBE_API_KEY is not set. Add it to your .env file."
+        )
+    return build("youtube", "v3", developerKey=api_key)
+
+
+def _parse_iso8601_duration_to_seconds(iso_duration: str) -> int:
+    """Convert an ISO 8601 duration (e.g. 'PT2H27M36S') to total seconds."""
+    m = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso_duration or "")
+    if not m:
+        return 0
+    hours = int(m.group(1) or 0)
+    minutes = int(m.group(2) or 0)
+    seconds = int(m.group(3) or 0)
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def _format_duration_human(seconds: int) -> str:
+    """Format seconds as a human string (e.g. '1h 23m 45s', '3m 34s', '45s')."""
+    if seconds <= 0:
+        return "unknown"
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if secs and not hours:
+        parts.append(f"{secs}s")
+    return " ".join(parts) if parts else f"{seconds}s"
+
+
+def _is_flag_enabled(flag_name: str) -> bool:
+    """Return True if env var is set to a truthy value ('true', '1', 'yes')."""
+    raw = os.environ.get(flag_name, "").strip().lower()
+    return raw in ("true", "1", "yes", "on")
+
+
+# ---------------------------------------------------------------------------
+# Tool 1: get_video_basics
+# ---------------------------------------------------------------------------
+
+
+def get_video_basics(video_id: str) -> dict[str, Any]:
+    """Fetch basic metadata for a YouTube video and a routing hint.
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+
+    Returns:
+        On success: a dict containing the video's display fields plus a
+        `should_attempt_chapters` flag derived from YouTube's own categoryId.
+        On failure: {"error": "<reason>"}.
+
+    The `should_attempt_chapters` field tells the sub-agent whether chapter
+    generation is worth attempting for this video. Music videos, comedy clips,
+    and short-form content are flagged False — for these, the sub-agent
+    produces a 3-section summary without chapters and never invokes the
+    multimodal fallback. This saves cost and avoids producing nonsensical
+    "chapters" for content that has no narrative structure.
+    """
+    try:
+        clean_id = _extract_video_id(video_id)
+        youtube = _get_youtube_client()
+        resp = youtube.videos().list(
+            part="snippet,contentDetails,statistics",
+            id=clean_id,
+        ).execute()
+
+        items = resp.get("items", [])
+        if not items:
+            return {"error": f"No video found for ID: {clean_id}"}
+
+        item = items[0]
+        snippet = item.get("snippet", {})
+        details = item.get("contentDetails", {})
+        stats = item.get("statistics", {})
+
+        duration_iso = details.get("duration", "")
+        duration_seconds = _parse_iso8601_duration_to_seconds(duration_iso)
+        category_id = snippet.get("categoryId", "")
+        caption_available = (details.get("caption", "false") or "false").lower() == "true"
+
+        skip_reason = _SKIP_CHAPTER_CATEGORIES.get(category_id)
+        should_attempt_chapters = skip_reason is None
+
+        return {
+            "video_id": clean_id,
+            "title": snippet.get("title", ""),
+            "channel_title": snippet.get("channelTitle", ""),
+            "published_at": snippet.get("publishedAt", ""),
+            "duration_iso": duration_iso,
+            "duration_seconds": duration_seconds,
+            "duration_human": _format_duration_human(duration_seconds),
+            "view_count": stats.get("viewCount", "0"),
+            "like_count": stats.get("likeCount", "0"),
+            "description": snippet.get("description", ""),
+            "category_id": category_id,
+            "caption_available": caption_available,
+            "should_attempt_chapters": should_attempt_chapters,
+            "skip_chapter_reason": skip_reason,
+        }
+    except HttpError as e:
+        return {"error": f"YouTube API error while fetching basics: {e}"}
+    except Exception as e:
+        return {"error": f"Failed to fetch video basics: {type(e).__name__}: {e}"}
+
+
+# ---------------------------------------------------------------------------
+# Tool 2: get_video_transcript_smart  (3-tier fallback)
+# ---------------------------------------------------------------------------
+
+
+def _try_transcript_scrape(clean_id: str) -> dict[str, Any]:
+    """Tier 1: free, fast (~2s), works on residential IPs.
+
+    Returns either {"transcript_text": "...", "language_code": "..."}
+    or {"error_kind": "blocked"|"disabled"|"not_found"|"other", "error": "..."}.
+    """
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except ImportError:
+        return {
+            "error_kind": "other",
+            "error": "youtube-transcript-api not installed",
+        }
+
+    try:
+        # v1.x instance API (preferred)
+        try:
+            api = YouTubeTranscriptApi()
+            fetched = api.fetch(clean_id, languages=["en", "en-US", "en-GB"])
+            snippets = fetched.snippets if hasattr(fetched, "snippets") else list(fetched)
+            language_code = getattr(fetched, "language_code", "en")
+        except (AttributeError, TypeError):
+            # v0.x classmethod fallback
+            snippets = YouTubeTranscriptApi.get_transcript(
+                clean_id, languages=["en", "en-US", "en-GB"]
+            )
+            language_code = "en"
+    except Exception as e:
+        err_str = str(e).lower()
+        if "requestblocked" in err_str or "ipblocked" in err_str or "ip ban" in err_str:
+            kind = "blocked"
+        elif "transcriptsdisabled" in err_str or "disabled for this video" in err_str:
+            kind = "disabled"
+        elif "notranscriptfound" in err_str or "no transcript" in err_str:
+            kind = "not_found"
+        else:
+            kind = "other"
+        return {"error_kind": kind, "error": f"{type(e).__name__}: {e}"}
+
+    if not snippets:
+        return {"error_kind": "not_found", "error": "Empty transcript returned"}
+
+    lines: list[str] = []
+    for s in snippets:
+        text = s.text if hasattr(s, "text") else s["text"]
+        start = s.start if hasattr(s, "start") else s["start"]
+        mm = int(start // 60)
+        ss = int(start % 60)
+        lines.append(f"[{mm:02d}:{ss:02d}] {text}")
+
+    return {
+        "transcript_text": "\n".join(lines),
+        "language_code": language_code,
+        "snippet_count": len(snippets),
+    }
+
+
+def _try_multimodal_transcript(clean_id: str) -> dict[str, Any]:
+    """Tier 2: Gemini 2.5 Flash native YouTube URL processing (~90-120s).
+
+    Only invoked if:
+      * tier 1 (scrape) failed, AND
+      * ENABLE_MULTIMODAL_FALLBACK env flag is true, AND
+      * caller (the sub-agent) decided chapters are worth attempting.
+
+    Returns either {"transcript_text": "..."} or {"error": "..."}.
+    """
+    try:
+        from google import genai
+        from google.genai.types import GenerateContentConfig, HttpOptions, Part
+    except ImportError:
+        return {"error": "google-genai not installed; cannot use multimodal fallback"}
+
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+    if not project:
+        return {"error": "GOOGLE_CLOUD_PROJECT not set"}
+
+    video_url = f"https://www.youtube.com/watch?v={clean_id}"
+    prompt = (
+        "You are analyzing a YouTube video. Produce a transcript-like "
+        "timestamped breakdown of the video content.\n\n"
+        "Format your response as plain text with one line per significant "
+        "moment, using this exact format:\n"
+        "[MM:SS] <one-sentence description of what is being said or shown>\n\n"
+        "Aim for 15-30 timestamps total, distributed across the video's duration. "
+        "Be factual and concrete. Describe what is actually happening — do not "
+        "summarize across multiple moments."
+    )
+
+    try:
+        client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location,
+            http_options=HttpOptions(api_version="v1"),
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                Part.from_uri(file_uri=video_url, mime_type="video/mp4"),
+                prompt,
+            ],
+            config=GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=4096,
+            ),
+        )
+    except Exception as e:
+        return {"error": f"Multimodal call failed: {type(e).__name__}: {e}"}
+
+    text = (response.text or "").strip()
+    if not text:
+        return {"error": "Multimodal returned empty output"}
+
+    return {"transcript_text": text}
+
+
+def get_video_transcript_smart(
+    video_id: str,
+    should_attempt_chapters: bool = True,
+) -> dict[str, Any]:
+    """Get a chapter-quality transcript using a 3-tier fallback chain.
+
+    Tier 1 — youtube-transcript-api scrape (free, ~2s, often blocked on cloudtop)
+    Tier 2 — Gemini 2.5 Flash multimodal (slow ~90s, paid, gated by env flag)
+    Tier 3 — video description (free, instant, low quality but never fails)
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+        should_attempt_chapters: Pass False for songs/comedy/shorts to skip tier 2
+            (multimodal is expensive and pointless for non-narrative content).
+
+    Returns:
+        Always returns a dict with at least these fields:
+          - source: "transcript" | "multimodal" | "description"
+          - transcript_text: the timestamped or plain text content
+          - video_id: the resolved video ID
+        Plus diagnostic fields:
+          - tier1_error: present if tier 1 failed
+          - tier1_error_kind: "blocked" | "disabled" | "not_found" | "other"
+          - tier2_attempted: True if multimodal was invoked
+          - tier2_error: present if multimodal was attempted and failed
+          - warning: present when tier 3 (description) was used
+
+        Returns {"error": "..."} only in the catastrophic case where even
+        description retrieval fails.
+    """
+    try:
+        clean_id = _extract_video_id(video_id)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    # ----- Tier 1: free scrape -----
+    tier1 = _try_transcript_scrape(clean_id)
+    if "transcript_text" in tier1:
+        return {
+            "source": "transcript",
+            "video_id": clean_id,
+            "transcript_text": tier1["transcript_text"],
+            "language_code": tier1.get("language_code", "en"),
+            "snippet_count": tier1.get("snippet_count", 0),
+        }
+
+    tier1_err_kind = tier1.get("error_kind", "other")
+    tier1_err = tier1.get("error", "transcript scrape failed")
+
+    # ----- Tier 2: multimodal (only when it would actually help) -----
+    multimodal_enabled = _is_flag_enabled("ENABLE_MULTIMODAL_FALLBACK")
+    tier2_worth_trying = (
+        should_attempt_chapters         # chapters not worth attempting? skip
+        and multimodal_enabled          # flag must be on
+        and tier1_err_kind != "disabled"  # if creator disabled captions, multimodal still works (video itself is fine)
+    )
+
+    tier2_attempted = False
+    tier2_err: str | None = None
+    if tier2_worth_trying:
+        tier2_attempted = True
+        tier2 = _try_multimodal_transcript(clean_id)
+        if "transcript_text" in tier2:
+            return {
+                "source": "multimodal",
+                "video_id": clean_id,
+                "transcript_text": tier2["transcript_text"],
+                "tier1_error": tier1_err,
+                "tier1_error_kind": tier1_err_kind,
+                "tier2_attempted": True,
+            }
+        tier2_err = tier2.get("error", "multimodal call failed")
+
+    # ----- Tier 3: description fallback (always works) -----
+    basics = get_video_basics(clean_id)
+    if "error" in basics:
+        return {
+            "error": (
+                f"All transcript sources failed. "
+                f"Tier1: {tier1_err}. "
+                f"Tier2: {'not attempted' if not tier2_attempted else tier2_err}. "
+                f"Tier3: {basics['error']}."
+            )
+        }
+
+    description = (basics.get("description") or "").strip()
+    if not description:
+        return {
+            "error": (
+                f"Transcript unavailable ({tier1_err}) and video has no description."
+            )
+        }
+
+    warning_parts = [f"Transcript scrape failed ({tier1_err_kind})."]
+    if tier2_attempted:
+        warning_parts.append(f"Multimodal fallback also failed ({tier2_err}).")
+    elif not multimodal_enabled and should_attempt_chapters:
+        warning_parts.append(
+            "Multimodal fallback is disabled (set ENABLE_MULTIMODAL_FALLBACK=true to enable)."
+        )
+    warning_parts.append(
+        f"Using video description ({len(description)} chars) as last-resort source. "
+        f"Chapter timestamps cannot be generated from a description."
+    )
+
+    return {
+        "source": "description",
+        "video_id": clean_id,
+        "transcript_text": description,
+        "tier1_error": tier1_err,
+        "tier1_error_kind": tier1_err_kind,
+        "tier2_attempted": tier2_attempted,
+        "tier2_error": tier2_err,
+        "warning": " ".join(warning_parts),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 3: get_top_comments_for_video
+# ---------------------------------------------------------------------------
+
+
+def get_top_comments_for_video(video_id: str) -> dict[str, Any]:
+    """Fetch the top 20 comments by YouTube's relevance ranking.
+
+    YouTube's `order=relevance` returns comments ranked by the same algorithm
+    used in the "Top comments" view on youtube.com — combining likes, replies,
+    and engagement signals.
+
+    Args:
+        video_id: An 11-character YouTube video ID, or a full YouTube URL.
+
+    Returns:
+        On success: {
+            "video_id": str,
+            "comments_disabled": False,
+            "count": int,
+            "comments": [{"author", "text", "like_count", "published_at"}, ...]
+        }
+        If comments are disabled: same shape with comments_disabled=True, empty list.
+        On other failure: {"error": "..."}.
+    """
+    clean_id: str | None = None
+    try:
+        clean_id = _extract_video_id(video_id)
+        youtube = _get_youtube_client()
+        resp = youtube.commentThreads().list(
+            part="snippet",
+            videoId=clean_id,
+            order="relevance",
+            maxResults=20,
+            textFormat="plainText",
+        ).execute()
+
+        comments: list[dict[str, Any]] = []
+        for item in resp.get("items", []):
+            top = item["snippet"]["topLevelComment"]["snippet"]
+            comments.append({
+                "author": top.get("authorDisplayName", "Unknown"),
+                "text": top.get("textDisplay", ""),
+                "like_count": top.get("likeCount", 0),
+                "published_at": top.get("publishedAt", ""),
+            })
+
+        return {
+            "video_id": clean_id,
+            "comments_disabled": False,
+            "count": len(comments),
+            "comments": comments,
+        }
+    except HttpError as e:
+        err_str = str(e).lower()
+        if "commentsdisabled" in err_str or "disabled comments" in err_str:
+            return {
+                "video_id": clean_id or video_id,
+                "comments_disabled": True,
+                "count": 0,
+                "comments": [],
+            }
+        return {"error": f"YouTube API error while fetching comments: {e}"}
+    except Exception as e:
+        return {"error": f"Failed to fetch comments: {type(e).__name__}: {e}"}
+```
+
+---
+
+# 📄 FILE 2 (NEW): `youtube_analyst/prompts/video_summarizer_agent.txt`
+
+This is the sub-agent's system prompt. Written to feel like the rest of YouBuddy's voice, with strong narrative scaffolding so the summary feels considered, not robotic.
+
+```
+You are the **Video Summarizer** — a specialist sub-agent within the YouBuddy ecosystem.
+
+Your mission: given a YouTube video ID or URL, deliver a high-density, structured summary that respects the viewer's time. You are the embodiment of YouBuddy's "Return on Attention" philosophy applied to a single piece of content.
+
+# Your Three-Tool Workflow
+
+You MUST follow this sequence and announce each step before the tool call. The ADK UI does not show tool-call spinners, so silence breaks the user experience.
+
+## Step 1 — Fetch the Basics
+Announce: 📺 **Fetching video metadata**...
+
+Call `get_video_basics(video_id)`.
+
+If the response contains an `error`, stop and report it cleanly. Otherwise, take note of:
+- `title`, `channel_title`, `duration_human`, `view_count` — for the header
+- `should_attempt_chapters` — this drives your workflow branching
+- `skip_chapter_reason` — if present, you'll mention it in the output
+
+## Step 2 — Get the Transcript (smart fallback)
+Announce: 📜 **Pulling transcript with timestamps**...
+
+Call `get_video_transcript_smart(video_id, should_attempt_chapters=<the flag from Step 1>)`.
+
+The response will contain a `source` field telling you which tier was used:
+- `source == "transcript"` — full timestamped transcript from YouTube. Generate proper chapters with accurate timestamps.
+- `source == "multimodal"` — Gemini watched the video directly and produced timestamped descriptions. Treat this like a transcript for chapter generation; the timestamps are accurate.
+- `source == "description"` — only the video's description text was available. **DO NOT generate chapters** — replace the Chapters section with the warning notice (see Output Format below).
+
+If the response has an `error` field, stop and report it. Do not fabricate content.
+
+## Step 3 — Get the Top Comments
+Announce: 💬 **Reading top community comments**...
+
+Call `get_top_comments_for_video(video_id)`.
+
+The response will tell you what happened:
+- `comments_disabled == True` — gracefully replace the Community Sentiment section with a note.
+- `error` field — note the issue but DO NOT abort the summary; comments are non-critical.
+- Normal response — analyze the 20 comments yourself (you're an LlmAgent, you have Gemini built in — no need for a separate analysis tool).
+
+# Step 4 — Synthesize (no tool calls; you reason from the data)
+
+You now have everything. Produce the summary yourself, applying genuine analytical care:
+
+**Quick Summary (3 sentences).** A neutral, high-level read like the back of a book. Cover the topic, the angle, and what the viewer walks away with. Avoid hype words like "amazing" or "incredible" — let the substance speak.
+
+**TL;DR (5-7 bullets).** The most specific, substantive points from the transcript. Reorder for *impact*, not chronology — lead with the most important claim or finding. Each bullet should add a distinct piece of information; do not pad. If you find yourself writing "the video discusses X" or "the creator talks about Y," delete it and write what was actually claimed.
+
+**Chapters (only when `source` is `transcript` or `multimodal`).** Identify 3-8 genuine narrative segments. Each chapter is:
+- A timestamp range `[MM:SS - MM:SS]`
+- A concise 2-5 word title that describes the *topic*, not the action ("The Hijacking", "Suspect Analysis", "The Money Found" — not "He talks about hijacking")
+- A 1-2 sentence summary of what happens in that segment
+
+Distribute chapters across the duration. ~3 for short videos (<10 min), ~5-7 for medium (10-45 min), 6-8 for longer. Never exceed 8 — group narrow segments under broader themes.
+
+**Community Sentiment.** Analyze the 20 comments holistically:
+- **Overall Sentiment:** approximate percentages of Positive · Neutral · Negative. Round to 5%.
+- **Key Themes:** 2-3 recurring topics or reactions. Aim for thematic clarity ("viewers admire the production quality", "many request a follow-up on suspect X") not surface description ("people commented").
+- **Standout Reactions:** 2-3 notable reactions in your own words. Paraphrase — never quote verbatim. Show what made each reaction notable (humor, expertise, emotional resonance).
+
+# Output Format (strict)
+
+Your final reply MUST follow this markdown structure exactly. Insert real values for placeholders. Sections in brackets are conditional.
+
+```
+# 🎬 <Video Title>
+**Channel:** <channel_title>  ·  **Duration:** <duration_human>  ·  **Views:** <view_count with commas>
+
+## ⚡ Quick Summary
+<3-sentence neutral overview>
+
+## 📋 TL;DR
+- <substantive bullet 1>
+- <substantive bullet 2>
+- <substantive bullet 3>
+- <substantive bullet 4>
+- <substantive bullet 5>
+(5-7 bullets total)
+
+[ONE OF THE FOLLOWING:]
+
+[IF source is "transcript" or "multimodal":]
+## 📚 Chapters
+**[00:00 - 02:15] <Chapter Title>**
+<1-2 line summary of what happens in this segment>
+
+**[02:15 - 05:40] <Chapter Title>**
+<1-2 line summary>
+
+(3-8 chapters)
+
+[IF source is "multimodal", add this small note immediately after the chapters:]
+> *Chapters generated from Gemini's native video understanding (transcript scraping was blocked on this network).*
+
+[IF source is "description":]
+> ⚠️ **Chapters unavailable.** YouTube's transcript was blocked and multimodal video processing was unavailable. The summary above is based on the video description.
+
+[IF basics had skip_chapter_reason (e.g. Music, Comedy):]
+> 🎵 **Chapters skipped.** Category "<skip_chapter_reason>" doesn't benefit from chapter-style breakdowns. The summary above captures the full content.
+
+[END CONDITIONAL]
+
+[ONE OF THE FOLLOWING:]
+
+[IF comments returned successfully:]
+## 💬 What Viewers Are Saying
+**Overall Sentiment:** ~XX% Positive  ·  ~XX% Neutral  ·  ~XX% Negative
+
+**Key Themes:**
+- <theme 1>
+- <theme 2>
+- <theme 3>
+
+**Standout Reactions:**
+- <paraphrased reaction 1>
+- <paraphrased reaction 2>
+- <paraphrased reaction 3>
+
+[IF comments_disabled is true:]
+## 💬 What Viewers Are Saying
+*Comments are disabled on this video, so audience sentiment cannot be analyzed.*
+
+[IF comments errored but other tools succeeded:]
+## 💬 What Viewers Are Saying
+*Could not retrieve comments for this video. <brief error detail>*
+```
+
+# Hard Rules
+
+1. **Do not quote comment text verbatim.** Paraphrase in your own voice — it respects users and produces cleaner output.
+2. **Do not fabricate timestamps.** If `source == "description"`, the Chapters section is replaced with the warning. No exceptions.
+3. **Do not skip the working-out-loud announcements.** The user can't see tool spinners; silence reads as a broken agent.
+4. **Do not exceed 8 chapters** for any video, regardless of length. Group narrow segments together.
+5. **After delivering the full summary, your job is complete.** The root youtube_analyst will field any follow-up questions; you don't need to keep the conversation open.
+
+# Tone
+
+You are part of the YouBuddy family — dense, direct, viewer-respectful. Write like a smart friend who watched the video so the user doesn't have to. No hype. No filler. Every line earns its place.
+```
+
+---
+
+# 📄 FILE 3 (NEW): `youtube_analyst/video_summarizer_agent.py`
+
+```python
+"""Video Summarizer sub-agent.
+
+A specialist LlmAgent that takes a YouTube video ID or URL and produces a
+structured, high-density summary in the YouBuddy voice. Implements YouTube-style
+sectioning (Quick Summary, TL;DR, Chapters, Community Sentiment) with smart
+routing based on video category and a 3-tier transcript fallback chain.
+
+Registered with the root youtube_analyst via sub_agents=[...].
+"""
+
+import os
+
+from google.adk.agents import Agent
+
+from .common.llm import GeminiWithLocation
+from .common.utils import load_prompt
+from .config import config
+from .video_summarizer_tools import (
+    get_top_comments_for_video,
+    get_video_basics,
+    get_video_transcript_smart,
+)
+
+
+video_summarizer_agent = Agent(
+    model=GeminiWithLocation(
+        model="gemini-2.5-pro",
+        location=config.GOOGLE_GENAI_LOCATION,
+    ),
+    name="video_summarizer",
+    description=(
+        "Specialist sub-agent for summarizing a single YouTube video given its "
+        "video ID or URL. Produces a structured multi-section summary: a 3-sentence "
+        "Quick Summary, a high-density TL;DR, timestamped Chapters (when the content "
+        "supports them), and Community Sentiment derived from the top 20 comments. "
+        "Implements category-aware routing — songs and comedy clips skip chapter "
+        "generation. Uses a 3-tier transcript fallback: YouTube transcript scrape "
+        "first, optional Gemini multimodal fallback when scraping is blocked, video "
+        "description as a last resort. Delegate to this agent whenever the user "
+        "asks to summarize, TL;DR, or get chapters for a specific YouTube video."
+    ),
+    instruction=load_prompt(os.path.dirname(__file__), "video_summarizer_agent.txt"),
+    tools=[
+        get_video_basics,
+        get_video_transcript_smart,
+        get_top_comments_for_video,
+    ],
+)
+```
+
+---
+
+# 📝 FILE 4 (MODIFY): `youtube_analyst/agent.py`
+
+Apply **exactly two surgical changes**. Don't rewrite the file.
+
+**Change 1 — Add this import.** Find the line:
+```python
+from .visualization_agent import visualization_agent
+```
+Add this line directly below it:
+```python
+from .video_summarizer_agent import video_summarizer_agent
+```
+
+**Change 2 — Update the `sub_agents=` line.** Find:
+```python
+    sub_agents=[visualization_agent],
+```
+Replace with:
+```python
+    sub_agents=[visualization_agent, video_summarizer_agent],
+```
+
+That's it. Every other line in `agent.py` stays exactly as it is.
+
+---
+
+# 📝 FILE 5 (MODIFY): `youtube_analyst/prompts/youtube_agent.txt`
+
+Open the existing prompt file. Find the **Workflow:** section (steps 1-4: Understand Request, Consult Skills, Load & Execute, Publish). Right after step 4 (the "Publish" line), add this paragraph:
+
+```
+
+**Single-Video Summarization (Sub-Agent Delegation):**
+
+When the user explicitly asks to summarize a specific YouTube video — for example "summarize this video", "give me a TL;DR for <video_id>", "what are the chapters for <video_id>", or simply pastes a YouTube URL with a summarization intent — IMMEDIATELY delegate the task to the `video_summarizer` sub-agent. Do NOT attempt to summarize the video yourself, and do NOT consult skills for this — the sub-agent is the specialist for this workflow.
+
+Announce the delegation cleanly before handing off:
+
+🎯 **Delegating to Video Summarizer** for video: <video_id_or_url>
+
+After the sub-agent returns its structured summary, present it to the user unchanged. The sub-agent owns the output format.
+```
+
+---
+
+# 📝 FILE 6 (MODIFY): `pyproject.toml`
+
+Find the `dependencies = [...]` block (or `[project.dependencies]` section, depending on layout). Add this line:
+
+```toml
+"youtube-transcript-api>=0.6.2",
+```
+
+Keep alphabetical ordering if the existing list is sorted. Then run:
+
+```bash
+uv sync
+```
+
+---
+
+# 📝 FILE 7 (MODIFY): `.env`
+
+Add this single new line (use `nano .env` and add to the end):
+
+```bash
+# Feature flag: enable Gemini 2.5 Flash multimodal fallback when transcript scrape fails.
+# When false (default), the agent falls back from transcript directly to description.
+# When true, the agent tries multimodal video understanding before description fallback.
+# Multimodal calls take 60-120s and cost ~$0.01-0.05 per call — keep off for fast demos.
+ENABLE_MULTIMODAL_FALLBACK=false
+```
+
+---
+
+# ✅ Stage-By-Stage Verification (do these in order)
+
+## Stage 1 — Tools work standalone (5 min)
+
+Create `test_summarizer_tools.py` in the youtube-analyst directory and run it:
+
+```python
+"""Stage 1: verify the 3 sub-agent tools work standalone."""
+
+import os
+import sys
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+sys.path.insert(0, ".")
+
+from youtube_analyst.video_summarizer_tools import (
+    get_top_comments_for_video,
+    get_video_basics,
+    get_video_transcript_smart,
+)
+
+
+def run(test_id: str, label: str) -> None:
+    print(f"\n{'=' * 60}\n  {label}: {test_id}\n{'=' * 60}")
+
+    basics = get_video_basics(test_id)
+    if "error" in basics:
+        print(f"❌ basics: {basics['error']}")
+        return
+    print(f"✅ basics:")
+    print(f"   title:                    {basics['title']}")
+    print(f"   category_id:              {basics['category_id']}")
+    print(f"   should_attempt_chapters:  {basics['should_attempt_chapters']}")
+    print(f"   skip_chapter_reason:      {basics.get('skip_chapter_reason')}")
+
+    trans = get_video_transcript_smart(
+        test_id,
+        should_attempt_chapters=basics["should_attempt_chapters"],
+    )
+    if "error" in trans:
+        print(f"❌ transcript: {trans['error']}")
+    else:
+        print(f"✅ transcript:")
+        print(f"   source:           {trans['source']}")
+        print(f"   transcript chars: {len(trans['transcript_text'])}")
+        if "warning" in trans:
+            print(f"   warning:          {trans['warning']}")
+
+    comments = get_top_comments_for_video(test_id)
+    if "error" in comments:
+        print(f"❌ comments: {comments['error']}")
+    else:
+        print(f"✅ comments:")
+        print(f"   disabled: {comments['comments_disabled']}")
+        print(f"   count:    {comments['count']}")
+
+
+if __name__ == "__main__":
+    run("dQw4w9WgXcQ", "Rick Astley (Music — should skip chapters)")
+    run("CbUjuwhQPKs", "LEMMiNO Cooper (Entertainment — should attempt)")
+    print("\n✅ Stage 1 complete.")
+```
+
+Run it twice — once with the flag off, once with it on:
+
+```bash
+# Run 1: multimodal OFF (default)
+uv run python test_summarizer_tools.py
+
+# Run 2: multimodal ON
+ENABLE_MULTIMODAL_FALLBACK=true uv run python test_summarizer_tools.py
+```
+
+**Expected behavior:**
+- Rick Astley: basics shows `should_attempt_chapters=False, skip_chapter_reason='Music'` → transcript scrape succeeds → comments work
+- LEMMiNO Cooper with flag OFF: scrape fails → falls back to description (fast, ~3s)
+- LEMMiNO Cooper with flag ON: scrape fails → multimodal succeeds (~90-120s) → returns timestamped output
+
+## Stage 2 — Agent runs end-to-end (3 min)
+
+```bash
+adk web
+```
+
+In the UI, select `youtube_analyst`, store your YouTube API key (existing flow), then test these prompts in order:
+
+1. **`Summarize this video: dQw4w9WgXcQ`**
+   Expected: delegation → metadata fetched → transcript succeeds → comments → 3-section summary (no chapters, music note shown)
+
+2. **`Summarize this video: CbUjuwhQPKs`**
+   Expected: delegation → metadata fetched → transcript fails → description fallback → 3-section summary (no chapters, description warning shown)
+
+3. **Restart the agent with `ENABLE_MULTIMODAL_FALLBACK=true` in your environment, then re-run prompt 2.** Same video, but this time you'll see the multimodal tier 2 fire and produce real chapters (~90s wait).
+
+## Stage 3 — Three-flow demo rehearsal (10 min)
+
+Rehearse the three demo flows you'll show your manager Monday:
+
+1. **The music video** — show smart routing skipping chapters intelligently
+2. **The documentary with flag OFF** — show fast description fallback (15s total)
+3. **The documentary with flag ON** — show multimodal recovery producing real chapters (~2 min total — explain what's happening as it processes)
+
+---
+
+# 🎬 Demo Pitch For Monday
+
+> *"I added a `video_summarizer` sub-agent to YouBuddy. It uses the `sub_agents` pattern — same as the existing `visualization_agent` — so it's consistent with the codebase. It owns three function tools.*
+>
+> *Before deciding what to build, I researched four approaches for getting video transcripts: the official YouTube captions API requires OAuth and only works on videos you own. Webshare proxies cost money and YouTube still blocks them. yt-dlp uses the same scraping mechanism. So I built a three-tier fallback chain.*
+>
+> *Tier 1 is youtube-transcript-api — free and fast on residential IPs. Tier 2 is Gemini 2.5 Flash native YouTube URL processing — works through any IP because the model fetches server-side, but takes 60-120 seconds. Tier 3 is the video description from the YouTube Data API — instant, low quality, never fails.*
+>
+> *I also added category-aware routing using YouTube's own `categoryId` field. Music, comedy, pets, and short-form content skip chapter generation entirely — no point chapterizing a 3-minute song.*
+>
+> *Multimodal tier 2 is gated by an environment variable so production runs are fast by default. Let me show you all three flows..."*
+
+That's a real engineering story — research, alternatives evaluated, multi-tier fallback, category routing, feature flag for cost control. Manager will see genuine effort and good judgment, not just code volume.
+
+---
+
+# 🚨 Pre-Ship Sanity Checklist
+
+| ✓ | Check |
+|---|---|
+| ☐ | All 3 new files created in correct locations |
+| ☐ | `agent.py` has 2 surgical changes (import + sub_agents list) |
+| ☐ | `youtube_agent.txt` has the delegation paragraph |
+| ☐ | `pyproject.toml` has `youtube-transcript-api>=0.6.2` |
+| ☐ | `.env` has `ENABLE_MULTIMODAL_FALLBACK=false` |
+| ☐ | `uv sync` ran without errors |
+| ☐ | Stage 1 test: all 3 tools work, smart routing shows correct flags |
+| ☐ | Stage 2 test: all 3 prompts produce expected output |
+| ☐ | Stage 3 rehearsal: you can narrate each flow comfortably |
+
+You're shipping production-quality code with thoughtful architecture, evidence-based design, and a real engineering story to tell. Good luck with the demo. 🚀
+
+You're absolutely right. Showing the user "Chapters unavailable because of X" exposes our internal plumbing — they didn't ask for chapters, so there's no reason to apologize for not delivering them. Clean output is better.
+
+Here are the **minimal changes** — only the prompt file needs editing. No code changes.
+
+# 📝 Only File To Modify: `youtube_analyst/prompts/video_summarizer_agent.txt`
+
+In the **Output Format (strict)** section, find this block:
+
+```
+[ONE OF THE FOLLOWING:]
+
+[IF source is "transcript" or "multimodal":]
+## 📚 Chapters
+**[00:00 - 02:15] <Chapter Title>**
+<1-2 line summary of what happens in this segment>
+
+**[02:15 - 05:40] <Chapter Title>**
+<1-2 line summary>
+
+(3-8 chapters)
+
+[IF source is "multimodal", add this small note immediately after the chapters:]
+> *Chapters generated from Gemini's native video understanding (transcript scraping was blocked on this network).*
+
+[IF source is "description":]
+> ⚠️ **Chapters unavailable.** YouTube's transcript was blocked and multimodal video processing was unavailable. The summary above is based on the video description.
+
+[IF basics had skip_chapter_reason (e.g. Music, Comedy):]
+> 🎵 **Chapters skipped.** Category "<skip_chapter_reason>" doesn't benefit from chapter-style breakdowns. The summary above captures the full content.
+
+[END CONDITIONAL]
+```
+
+**Replace it entirely with this much cleaner version:**
+
+```
+[IF source is "transcript" or "multimodal" — include this section:]
+
+## 📚 Chapters
+**[00:00 - 02:15] <Chapter Title>**
+<1-2 line summary of what happens in this segment>
+
+**[02:15 - 05:40] <Chapter Title>**
+<1-2 line summary>
+
+(3-8 chapters)
+
+[IF source is "description" OR skip_chapter_reason is set — OMIT the Chapters section entirely. Do NOT include any placeholder, warning, or notice about chapters being unavailable. The user did not ask for chapters; the absence should be silent.]
+```
+
+# 🔍 One Tiny Cleanup In The Same File
+
+Find the **Hard Rules** section. Rule #2 currently says:
+
+```
+2. **Do not fabricate timestamps.** If `source == "description"`, the Chapters section is replaced with the warning. No exceptions.
+```
+
+**Replace with:**
+
+```
+2. **Do not fabricate timestamps.** If `source == "description"`, OMIT the Chapters section entirely — no warning, no placeholder, no note. The output simply doesn't have a Chapters section.
+```
+
+# ✅ That's All
+
+No code changes. No re-testing of tools. Just two text edits in one prompt file. The agent will now silently produce a 3-section output (Quick Summary, TL;DR, Community Sentiment) whenever chapters aren't available — for any reason — and the user never sees the internal plumbing.
+
+Restart `adk web` after saving the prompt file so the new instructions load. You're ready to ship.
 
 
 
