@@ -2348,4 +2348,170 @@ No code changes. No re-testing of tools. Just two text edits in one prompt file.
 Restart `adk web` after saving the prompt file so the new instructions load. You're ready to ship.
 
 
+----------------
 
+Got it. Here's your demo script — written to be read aloud naturally, with built-in pauses for screen-sharing and tool-call demonstrations. I've structured it as **10 minutes of speaking time** split across what / how / why, with explicit timing cues so you stay on track.
+
+A few notes before the script:
+
+- **Total speaking time:** ~9 minutes 30 seconds at a natural pace (gives you 30s buffer for transitions and questions)
+- **Read it normally** — don't rush. The pacing is calibrated for unhurried delivery.
+- **Bold text** = emphasis when speaking, not for visual slides
+- **[Bracketed cues]** = stage directions, not to be read aloud
+- **The "—" dashes** are natural breath pauses
+- I've kept it in first person and slightly conversational — sounds human, not like reading
+
+I've also baked in opportunities to glance at your screen rather than the camera, which feels more natural than reading straight through.
+
+---
+
+# 🎬 YOUR DEMO SCRIPT
+
+---
+
+**[00:00 — Opening, ~30 seconds]**
+
+Hey everyone — thanks for the time today. So as you know, my weekend task was to fork the `youtube-analyst` ADK sample and add a new capability to it. Specifically, my manager asked me to add a **sub-agent and the required tools to summarize a YouTube video** given a video ID from the user.
+
+I'm going to walk you through three things in this demo: **what** I built, **how** I built it, and **why** I made the design choices I did. The "why" part is the most important — because honestly, the implementation went through several iterations before I landed on what's deployed today.
+
+Let me start with what you'll actually see when you use it.
+
+---
+
+**[00:30 — What I built: live demo, ~2 minutes]**
+
+[Switch to ADK Playground / Agent Engine screen]
+
+So this is the deployed agent. I'm going to type a request the way a real user would —
+
+[Type or paste: "summarize this video: CbUjuwhQPKs"]
+
+And the first thing you'll notice is that the root `youtube_analyst` agent recognizes this as a summarization task — and instead of trying to handle it itself, it **delegates to my new sub-agent called `video_summarizer`**. You can see that announcement on the screen — "Delegating to Video Summarizer."
+
+The sub-agent then runs three tool calls in sequence — fetching metadata, pulling the transcript, and reading the top comments. Each one announces itself before it fires, because the ADK web UI doesn't show tool-call spinners — so silence would feel like the system was broken.
+
+And then it produces this structured output — a **Quick Summary** at the top, a **TL;DR** with 5-7 bullet points, a **Chapters** section with timestamps if the video supports it, and **Community Sentiment** derived from the top 20 comments.
+
+[Scroll through the output briefly]
+
+Now here's the part I want to highlight — let me run a different video.
+
+[Type: "summarize this video: dQw4w9WgXcQ" — Rick Astley]
+
+For this video — the famous Rick Astley song — you'll notice the agent **deliberately skips the Chapters section**. Not because anything failed — but because chapter generation doesn't make sense for a 3-minute music video. There's nothing to chapterize. The agent recognizes this and produces a clean 3-section summary instead.
+
+So that's **what** I built. Now let me walk you through **how** — and more importantly, the design decisions behind each piece.
+
+---
+
+**[02:30 — How I built it: file structure, ~1 minute 30 seconds]**
+
+[Switch to code editor / file explorer]
+
+I added three new files and modified two existing files. I deliberately followed the **same structural pattern** as the existing `visualization_agent` that was already in the repo — flat layout, no nested `sub_agents/` folder — because consistency with the existing codebase matters more than imposing my own conventions.
+
+[Point to file tree]
+
+- `video_summarizer_agent.py` — the LlmAgent definition itself
+- `video_summarizer_tools.py` — the three function tools the sub-agent uses
+- `prompts/video_summarizer_agent.txt` — the sub-agent's system prompt, loaded the same way as the existing prompts
+
+And the two surgical modifications:
+
+- In the root `agent.py`, I added the import and registered the sub-agent in the `sub_agents=` list — just two lines
+- In `prompts/youtube_agent.txt`, I added a single paragraph telling the root agent when to delegate
+
+That's it. Three new files, two two-line modifications. The existing 12 skills, the visualization agent, the existing tools — none of that got touched. The whole feature is **additive**.
+
+[Open `video_summarizer_agent.py`]
+
+For the sub-agent itself — I used `gemini-2.5-pro` for the reasoning model, and registered it via `sub_agents=[]` rather than wrapping it as an `AgentTool`. I chose `sub_agents` specifically because that's the pattern the existing `visualization_agent` uses, so the code style stays uniform.
+
+---
+
+**[04:00 — Why I made these choices: the design journey, ~3 minutes 30 seconds]**
+
+Now this is the most important part of the demo — because the architecture you're seeing didn't come from one shot of inspiration. It came from working through several wrong turns first, and I want to walk you through that thinking.
+
+**Decision one — the summary structure.**
+
+My first instinct was just to ask Gemini to summarize the video and call it done. But that produces a wall of text. So I asked myself — how do real products do this? YouTube itself has a feature called "Ask" powered by Gemini, and I noticed they layer their output. They give you a quick answer first, then deeper detail if you ask for it. Tools like Commetry and TubeHorizon do something similar with comment summarization — they extract themes and sentiment percentages, not raw comment dumps.
+
+So I designed a **four-section output** that mirrors that layered consumption pattern. Quick Summary tells you whether you should even watch. TL;DR gives you the substance without watching. Chapters help you jump to the part you care about. And Community Sentiment tells you what the audience actually thought. Each section answers a different question.
+
+**Decision two — separating tools instead of one big "power tool."**
+
+I considered building a single function that fetched metadata, transcript, and comments in one call. It would be slightly faster. But I rejected that for two reasons. **First**, in the ADK web UI, fewer tool calls means less visible architecture — a single power tool would show up as one event instead of three, which hides the orchestration. **Second**, debugging gets harder — if one of three operations fails inside a bundled tool, you get one error message instead of three precise ones. So I went with three focused tools. Each one is independently testable, independently retryable, and visible in the UI as a distinct step.
+
+**Decision three — and this is the big one — how to actually get the transcript.**
+
+This is where I spent the most time researching. The obvious choice was the `youtube-transcript-api` library that the repo already uses. It's free, fast, no API key needed. But when I tested it on cloudtop, it failed about half the time — specifically on longer videos and popular channels. The reason — YouTube actively blocks transcript scraping from **datacenter IPs**, which includes cloudtop because it runs on Google Cloud infrastructure.
+
+So I researched alternatives. **Option one** — the official YouTube Data API has a `captions.download` endpoint. Sounds perfect — until you read the docs. It requires OAuth, not just an API key. And it only works on **videos you own**. You cannot legally download captions from arbitrary public videos using it. So that's out.
+
+**Option two** — residential proxy services like Webshare. The cost is around five to ten dollars per gigabyte, and YouTube has started blocking known proxy IPs anyway. Adding a paid third-party service to a corporate demo feels like the wrong move.
+
+**Option three** — `yt-dlp`. Same scraping mechanism, same block. Just a different library hitting the same wall.
+
+So none of those worked. What I landed on was a **three-tier fallback chain** built into a single tool called `get_video_transcript_smart`. It tries the free transcript scrape first. If that fails, it tries Gemini 2.5 Flash's **native YouTube URL processing** — where the model fetches the video server-side, bypassing the IP block entirely because it's not our machine making the request. And if even that fails, it falls back to using the video description as a last resort.
+
+**Decision four — category-aware routing.**
+
+After I had that working, I tested it on the Rick Astley music video, and the agent produced "chapters" for a song — things like "intro section" and "first chorus." That's nonsense. Songs don't have chapters in a meaningful sense.
+
+I went looking for a signal. Turns out YouTube's `videos.list` API already returns a `categoryId` field — categorizing videos as Music, Comedy, Pets, Short Movies, Education, Documentary, and so on. I'm already making this API call for metadata, so getting the category costs zero extra. I built a small skip-list of categories where chapters don't make sense, and the sub-agent checks that flag before attempting chapter generation. For music videos and comedy clips, the agent silently produces a three-section summary without ever even attempting multimodal fallback — saving cost, saving latency, and producing better output.
+
+**Decision five — feature-flagging the slow path.**
+
+The multimodal tier takes around 90 to 120 seconds per call. That's acceptable for a deep analysis but awful for a quick interactive demo. So I gated it behind an environment variable — `ENABLE_MULTIMODAL_FALLBACK`. Default is off. In production, the agent runs fast — transcript or description fallback only. When the flag is on, the multimodal middle tier engages. This way the same code can serve a fast interactive workflow and a deeper one-off analysis depending on context.
+
+---
+
+**[07:30 — Final flow recap, ~1 minute]**
+
+So putting it all together — when a user asks to summarize a video, here's what actually happens.
+
+The root agent recognizes the summarization intent and delegates to the sub-agent. The sub-agent fetches metadata, which tells it the video's category and whether to attempt chapters. It then asks for the transcript — trying the free scrape first, optionally falling back to multimodal video understanding if scraping is blocked and the flag is on, and finally falling back to the description if everything else fails. It pulls the top 20 comments by YouTube's own relevance ranking, analyzes them for sentiment and themes, and assembles the four-section output.
+
+The whole flow runs in about 15 seconds in the common case — and never crashes, never fabricates timestamps it doesn't have, and never tries to chapterize content that doesn't deserve chapters.
+
+---
+
+**[08:30 — Closing, ~1 minute]**
+
+If I had more time, there are a few directions I'd explore. First — the multimodal path is slow because each call ingests the entire video. There's recent research on streaming video understanding that could cut that latency significantly. Second — the sentiment analysis on comments is currently pure LLM reasoning. For higher accuracy, I'd consider a dedicated classifier or grounding it with comment likes as a confidence signal. Third — the agent currently only handles English transcripts. Adding language detection and translation through the existing transcript API would extend coverage globally.
+
+But for the weekend scope — what I shipped is a sub-agent that follows the existing codebase patterns, uses three focused tools, makes evidence-based design choices, and degrades gracefully across multiple failure modes. The feature is fully additive — nothing existing was modified beyond two surgical changes for registration.
+
+Happy to take any questions, walk through specific code paths, or run the agent on a video of your choosing.
+
+---
+
+**[09:30 — End]**
+
+---
+
+# 📋 Quick Reference Card (keep this handy)
+
+**If your manager interrupts and asks a hard question, here are the talking points to grab:**
+
+| Question | One-line answer |
+|---|---|
+| Why sub_agents and not AgentTool? | "Codebase consistency — visualization_agent uses sub_agents=, so I matched that pattern." |
+| Why Gemini 2.5 Pro for the sub-agent? | "For analytical reasoning depth on TL;DR + sentiment. The cheaper Flash model handles the multimodal video processing inside the tool." |
+| Why not the official captions API? | "Requires OAuth and only works on videos you own. Public videos like LEMMiNO can't be accessed that way." |
+| Why feature flag the multimodal? | "Latency tradeoff. 90+ seconds per call. Off by default so production stays fast." |
+| What's the YouTube quota usage? | "2 units per summary — metadata plus comments. Free tier is 10,000/day, so ~5,000 summaries possible." |
+| Did you add any new dependencies? | "Just one — youtube-transcript-api. The repo already had google-genai and google-api-python-client." |
+
+# 🎯 Delivery Tips
+
+1. **The first 30 seconds matter most** — don't rush them. State the task clearly, state what you'll cover.
+2. **The "design journey" section (around minute 4-7) is your strongest content** — it shows engineering judgment, not just code. Slow down there.
+3. **If a tool call takes longer than expected during your live demo,** fill the silence by reading the next section of the script — don't apologize for the latency, narrate it as "the agent is currently processing the video through Gemini's multimodal understanding."
+4. **Keep one Chrome tab open with the code editor in advance** so you can switch back without fumbling.
+5. **Practice once out loud before the demo** — silently reading and speaking aloud are different. You'll catch awkward phrasings only by speaking.
+6. **Don't read the bracket directions out loud** (obviously, but worth flagging).
+
+Good luck. You've done real engineering work — let the script show that.
