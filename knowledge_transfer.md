@@ -247,3 +247,205 @@ Now that it works, prep the demo:
 You've made the call. I'm not cycling anymore. youtube-analyst is what you're building. The technical risks are bounded, the failure modes are anticipated, and the security advisory is flagged. Saturday morning, follow the steps above in order. If anything breaks, search the exact error message in the failure-points list above first before panicking.
 
 If you hit an error I haven't anticipated, send me the exact terminal output Saturday and I'll help debug. **Don't pivot to another agent mid-weekend.** Lock in, build, demo. You've got this.
+
+
+----
+
+This concept can become a 30–45 second cinematic ad reel if you give Google Flow clear scene-by-scene instructions. The key is to make the Modak feel like a lovable brand mascot rather than just a talking sweet.
+
+🎬 TITLE: "मी मोदक कट्ट्याचा मोदक आहे!"
+
+STYLE:
+Warm, festive, premium, Marathi cultural vibe.
+3D animated talking modak.
+Soft golden lighting.
+Background music: gentle tabla, flute, and festive Ganesh utsav ambience.
+
+---
+
+SCENE 1: GRAND ENTRY (0-4 sec)
+
+VISUAL:
+Close-up of a steaming fresh ukadiche modak.
+Golden morning light.
+Soft steam rising.
+Camera slowly zooms in.
+
+MODAK (smiling):
+"नमस्कार मंडळी! 🙏"
+
+Small pause.
+
+"मी आहे मोदक कट्ट्याचा खास उकडीचा मोदक!"
+
+SFX:
+Tiny sparkle sound.
+
+---
+
+SCENE 2: THE FUNNY HOOK (4-8 sec)
+
+VISUAL:
+Modak winks at camera.
+A plate full of modaks appears.
+
+MODAK:
+"हो हो... तोच मोदक ज्याला पाहिल्यावर लोक म्हणतात..."
+
+Voice changes playfully:
+
+"फक्त एकच घेऊ..."
+
+Pause.
+
+"आणि नंतर अर्धा डझन संपवतात!" 😄
+
+VISUAL:
+Plate magically becomes empty.
+
+---
+
+SCENE 3: THE SECRET (8-15 sec)
+
+VISUAL:
+Kitchen montage.
+Rice flour dough being prepared.
+Fresh coconut being grated.
+Jaggery melting.
+
+MODAK:
+"तुम्हाला माहिती आहे का माझा जन्म कुठे होतो?"
+
+"मी कोणत्याही मोठ्या फॅक्टरीत तयार होत नाही."
+
+Camera shows homemade preparation.
+
+"मला प्रेमाने, स्वच्छतेने आणि घरगुती पद्धतीने तयार करतात गौरी अक्षय कराडकर ताई!" ❤️
+
+---
+
+SCENE 4: QUALITY & EMOTION (15-22 sec)
+
+VISUAL:
+Hands shaping beautiful modaks.
+Close-up shots of folds and stuffing.
+
+MODAK:
+"माझ्या प्रत्येक घडीत मेहनत आहे..."
+
+"प्रत्येक सारणात गोडवा आहे..."
+
+"आणि प्रत्येक घासात घरची चव आहे!"
+
+Background music becomes emotional.
+
+---
+
+SCENE 5: THE BROTHER JOKE (22-28 sec)
+
+VISUAL:
+Two modaks appear side-by-side.
+
+Left:
+Ukadiche Modak
+
+Right:
+Kesar Modak wearing tiny sunglasses 😎
+
+MODAK:
+"काही जण माझ्या नारळ-गुळाच्या सारणावर फिदा आहेत..."
+
+"तर काहींना माझा केशरवाला भाऊ जास्त आवडतो!"
+
+KESAR MODAK:
+"मी पण कमी नाही बरं का!" 😎
+
+Both laugh.
+
+---
+
+SCENE 6: GANPATI MOMENT (28-35 sec)
+
+VISUAL:
+Beautiful Ganpati decoration.
+Modaks offered as naivedya.
+Family gathered happily.
+
+MODAK:
+"पण एक गोष्ट मात्र नक्की..."
+
+"बाप्पाला नैवेद्य दाखवायचा असेल..."
+
+"किंवा कुटुंबासोबत गोड क्षण साजरे करायचे असतील..."
+
+"तर आम्ही नेहमी तयार आहोत!"
+
+---
+
+SCENE 7: CALL TO ACTION (35-42 sec)
+
+VISUAL:
+Premium product shots.
+Steam rising.
+Brand logo appears.
+
+MODAK:
+"म्हणून यंदा गणरायासाठी बाहेरचे नाही..."
+
+"मोदक कट्ट्याचे घरगुती मोदक घरी आणा!"
+
+---
+
+SCENE 8: ENDING PUNCHLINE (42-48 sec)
+
+VISUAL:
+Customer tries to take photo.
+
+Modak slowly moves away from camera.
+
+MODAK:
+"आणि हो..."
+
+"मला खाण्याआधी फोटो काढा..."
+
+"कारण मी प्लेटमध्ये जास्त वेळ टिकत नाही!" 🤭📸
+
+VISUAL:
+Plate instantly becomes empty.
+
+---
+
+FINAL FRAME (48-52 sec)
+
+SCREEN TEXT:
+
+मोदक कट्टा
+
+उकडीचे मोदक – ₹३० प्रति नग
+केशर मोदक – ₹५० प्रति नग
+
+शुद्ध तुपातले • घरगुती चव • ताजे बनवलेले
+
+ऑर्डरसाठी संपर्क:
+गौरी अक्षय कराडकर
+
+VOICEOVER (MODAK):
+"गणपती बाप्पा मोरया!" 🚩
+
+Crowd:
+"मंगलमूर्ती मोरया!"Extra tip for Google Flow
+
+Keep the Modak's voice:
+
+Warm and friendly
+
+Slightly childlike but not cartoonish
+
+Marathi accent
+
+Happy and confident
+
+Speaking directly to the viewer as if he's the mascot of "Modak Katta"
+
+
+The funniest visual moment will likely be the empty plate gag ("फक्त एकच घेऊ..." → plate instantly empty). Those small visual jokes usually perform very well on Instagram Reels and WhatsApp Status.
