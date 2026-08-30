@@ -102,3 +102,4 @@ Editable PowerPoint Files (.pptx): Programmatically generated PowerPoint files t
 ==========================================================
 
 
+Focus this deck specifically on “From Barter to Bucks”: take students on a funny journey from barter → shells → gold → coins → paper money → the Gold Standard → modern money. Use the recurring story of a child trying to trade a chicken for sneakers to introduce the problems with barter.
